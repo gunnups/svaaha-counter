@@ -234,13 +234,24 @@ export function createDetector(hopMs, options = {}) {
         if (t - vowelStartT > opts.maxVowelMs) {
           state = 'too-long';
           gapMs = 0;
+          sibRunMs = 0;
           eventFrames = [];
           return { startMs: eventStartT, endMs: t, vowelMs: Math.round(vowelMs), frames: [], rejected: 'too long (chanting?)' };
         }
         return null;
       }
       case 'too-long':
-        // Wait for this voice to pause before listening for a new "s".
+        // Wait for this voice to pause before listening for a new "s" -
+        // but in continuous chanting there may be no pause before svaahaa,
+        // so a clear "s" also starts a new candidate.
+        sibRunMs = isSib ? sibRunMs + hopMs : 0;
+        if (sibRunMs >= opts.minSibMs) {
+          state = 'sib';
+          eventStartT = t - sibRunMs;
+          lastSibT = t;
+          eventFrames = recent.slice(-Math.ceil(sibRunMs / hopMs));
+          return null;
+        }
         gapMs = (isVoiced || isSib) && frame.db > peakDb - opts.dropDb ? 0 : gapMs + hopMs;
         if (gapMs > opts.maxGapMs) reset();
         return null;
