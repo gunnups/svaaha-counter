@@ -4,46 +4,31 @@ Counts svāhā offerings during a homam by listening through the phone or tablet
 Plain web page (no server code, no internet needed once opened); works in Safari on iPhone
 and Chrome / Samsung Internet on the Galaxy Tab. Counting happens entirely on the device.
 
-## The sound picture
-
-Under the count, the last 15 s of sound scroll past. Left: when Start or Reset was pressed; right: the time now.
-grey = quiet, blue-grey = voice / mantra, saffron = a counted svāhā (painted ~1 s after it ends,
-once confirmed), white tick = your mark. While testing, tap **Mark svāhā** (or press **Space** on a
-computer) right after each svāhā; the marks are saved inside the sound file and
-`node tools/analyze.mjs clip.wav` then reports hits, misses and extra counts.
-
 ## How it recognises svāhā
 
-1. A short hiss (“s”) followed quickly by a long, **steady** “aaa…haa” vowel, at least 0.6 s.
-2. Ordinary talk and the mantra keep changing vowels, so they fail the steadiness check.
-3. Each heard svāhā waits ~0.9 s before counting; if another svāhā-like sound follows
-   (“…prachodayā**t** svāhā”) the later one wins, so each offering counts once.
-4. Two counts can't be closer than the “gap between counts” (3 s default).
-5. Optional **teach mode** compares sounds with your own recorded svāhās.
+**Learn my svāhā (recommended).** The app learns how *your* svāhā sounds, the way you say it at the
+end of the mantra, and then counts by comparing whole words — so fast or drawn-out svāhā, and
+svāhā running straight on from the mantra, are all fine. It learns on the device you use and keeps
+what it learned only on that device.
 
-Background level is measured continuously, so it adapts to a quiet home or a busy hall.
+1. Settings → **Start learning**.
+2. Chant about 10 rounds of mantra + svāhā as you will at the homam. Right after each svāhā tap
+   **Mark svāhā** (under the counter; on a computer you can press Space).
+3. Tap **Finish learning**. It tells you how many it learned and whether they stand apart from the mantra.
+4. With family: everyone chants together, one person marks. Keep **Add to what it already learned**
+   ticked so the group's svāhā join yours.
 
-## Rehearsal checklist (with family, ~10 offerings)
+Until a device has learned, it uses a basic listener (a hiss "s" followed by a held "aa").
+Two counts can't be closer than the *gap between counts* (3 s by default).
 
-1. Open the app and tap **Start**. *Show what it hears* is on by default: the status line and the
-   log under the counter say what each sound was and why it did or didn't count
-   (e.g. *no "s" heard before the "aa"*, *too short*, *not a steady "aa"*).
-   If svāhās are being missed, use **Settings → Record a test clip** while doing a few rounds;
-   the .wav it saves can be replayed with `node tools/analyze.mjs clip.wav` to tune the settings.
-2. **Teach svāhā**: everyone says “svāhā” together 5–8 times, a few seconds apart. Tap *Finish*.
-3. **Teach background**: chant the mantra and chat normally for 20 s *without* svāhā.
-4. Tap **Start**, do ~10 real mantra + svāhā rounds, compare the count with reality.
-5. Read the log under the counter:
-   - svāhās missed as *too short* → lower **Shortest svāhā**.
-   - missed as *not a steady "aa"* / *not like taught* → lower **Strictness**.
-   - nothing logged at all → raise **Sensitivity**.
-   - extra counts → raise **Strictness** or **Shortest svāhā**.
-6. At the event: re-do step 2 in the hall if it's very different; keep the phone ~1–2 m from
-   the people saying svāhā; use **−1 / +1** for any correction. The count is saved on the device
-   and survives refresh / app close. **Reset** asks for confirmation.
+## At the homam
 
-Keep the screen on: the app requests it, but also set iPhone *Settings → Display → Auto-Lock → Never*
-for the event (iOS pauses the microphone when the screen locks).
+- Keep the phone ~1–2 m from the people saying svāhā. Use **−1 / +1** for any correction.
+- The count is saved on the device and survives refresh / app close; **Reset** asks first.
+- Set *Settings → Display → Auto-Lock → Never* (iOS stops the microphone when the screen locks).
+- Under the count, the last 15 s of sound scroll past (left: when Start or Reset was pressed;
+  right: now): blue-grey = chanting, saffron = a counted svāhā, white tick = a mark.
+  A svāhā that stays blue-grey was missed.
 
 ## Putting it on the phone
 
@@ -54,10 +39,10 @@ host (e.g. GitHub Pages), open it in Safari → Share → **Add to Home Screen**
 ## Development
 
 ```bash
-npm test          # detection unit tests (real speech clips made with macOS `say`)
-npm run e2e       # real Chrome: plays a recorded scene in as the mic, checks the count + screenshots
-npm run serve     # http://localhost:8765 on this Mac
-node tools/analyze.mjs clip.wav [minVowelMs] [sensitivity] [strictness]   # replay a recorded test clip
+npm test            # unit tests
+npm run e2e         # real Chrome: plays a scene in as the microphone, checks counting + screenshots
+npm run e2e:learn   # real Chrome: learns from 6 marked rounds, then counts the next 3
+npm run serve       # http://localhost:8765
 ```
 
 Bump `VERSION` in `sw.js` whenever files change so installed copies update.

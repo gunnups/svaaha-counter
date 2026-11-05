@@ -14,9 +14,8 @@ export const roomNoise = (seconds, amp = 0.003) => noise(Math.round(seconds * SR
 export { scene, mix, scale };
 
 /** Run audio through a fresh engine in mic-sized chunks; return decisions. */
-export function run(samples, settings = {}, taught = { positives: [], negatives: [] }, mode = 'count') {
-  const engine = createEngine(SR, { ...SETTINGS_DEFAULTS, ...settings }, taught);
-  engine.setMode(mode);
+export function run(samples, settings = {}, learned = null) {
+  const engine = createEngine(SR, { ...SETTINGS_DEFAULTS, ...settings }, learned);
   const out = [];
   for (let i = 0; i < samples.length; i += 2048) out.push(...engine.push(samples.subarray(i, i + 2048)));
   return out;

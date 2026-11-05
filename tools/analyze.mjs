@@ -22,7 +22,7 @@ const settings = {
   ...(sensitivity && { sensitivity: Number(sensitivity) }),
   ...(strictness && { strictness: Number(strictness) }),
 };
-const engine = createEngine(sampleRate, settings, { positives: [], negatives: [] });
+const engine = createEngine(sampleRate, settings, null);
 const countEnds = [];
 for (let i = 0; i < samples.length; i += 2048) {
   for (const d of engine.push(samples.subarray(i, i + 2048))) {

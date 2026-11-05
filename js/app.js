@@ -1,4 +1,4 @@
-// Screen wiring: buttons, settings, teach mode, keep-awake, and the count itself.
+// Screen wiring: buttons, settings, "Learn my svāhā", keep-awake, and the count itself.
 
 import { startMic } from './audio.js';
 import { createEngine, marginFor } from './engine.js';
@@ -10,7 +10,6 @@ import { createRecorder, MAX_SECONDS } from './recorder.js';
 const SAVE_LABEL = `Save last ${MAX_SECONDS / 60} min of sound`;
 const MARK_LABEL = 'Mark svāhā';
 
-const BACKGROUND_TEACH_MS = 20000;
 const MIC_DENIED_HELP =
   'Microphone is blocked for this page. Chrome: click the icon left of the address → Microphone → Allow, then reload. ' +
   'iPhone: Settings → Apps → Safari → Microphone → Allow (or aA in the address bar → Website Settings).';
@@ -31,9 +30,10 @@ const ui = {
   resetCount: $('reset-count'),
   settingsDialog: $('settings'),
   form: $('settings-form'),
-  teachSvaha: $('teach-svaha'),
-  teachBackground: $('teach-background'),
-  teachStatus: $('teach-status'),
+  learn: $('learn'),
+  learnAdd: $('learn-add'),
+  learnStatus: $('learn-status'),
+  finishLearning: $('finish-learning'),
   saveSound: $('save-sound'),
   markSvaha: $('mark-svaha'),
 };
@@ -42,11 +42,10 @@ const waveView = createWaveView($('wave'), $('wave-start'), $('wave-end'));
 
 let count = store.loadCount();
 let settings = store.loadSettings();
-let taught = store.loadTaught();
+let learned = store.loadLearned();
 let mic = null;
 let engine = null;
 let wakeLock = null;
-let backgroundTimer = null;
 let recorder = null;
 let wave = null;           // last 30 s of sound for the scrolling picture
 let audioMs = 0;          // listening clock: ms of sound received since Start
@@ -86,8 +85,8 @@ function setStatus(state, text) {
 }
 
 function listeningStatus() {
-  const taughtNote = settings.useTaught && taught.positives.length ? ` · taught ${taught.positives.length}` : '';
-  setStatus('listening', `Listening${taughtNote}`);
+  const how = engine?.usingLearned ? ` · knows your svāhā (${learned.templates.length})` : '';
+  setStatus('listening', `Listening${how}`);
 }
 
 function addLog(decision) {
@@ -95,9 +94,11 @@ function addLog(decision) {
   const li = document.createElement('li');
   li.dataset.type = decision.type;
   const time = new Date().toLocaleTimeString([], { hour12: false });
-  const secs = (decision.event.vowelMs / 1000).toFixed(1);
-  const flux = decision.event.flux !== undefined ? ` steady ${decision.event.flux}` : '';
-  li.textContent = `${time}  ${decision.type}  ${secs}s${flux}${decision.reason ? `  ${decision.reason}` : ''}`;
+  const { event } = decision;
+  const detail = event.match !== undefined
+    ? `matched your svāhā (${event.match})` // learned matcher: lower = closer
+    : `${(event.vowelMs / 1000).toFixed(1)}s${event.flux !== undefined ? ` steady ${event.flux}` : ''}`;
+  li.textContent = `${time}  ${decision.type}  ${detail}${decision.reason ? `  ${decision.reason}` : ''}`;
   ui.log.prepend(li);
   while (ui.log.children.length > LOG_LIMIT) ui.log.lastElementChild.remove();
 }
@@ -125,25 +126,6 @@ function handle(decision) {
     setCount(count + 1, true);
     wave?.markSvaha(decision.event.startMs, decision.event.endMs);
   }
-  if (decision.type === 'ignored') {
-    ui.teachStatus.textContent = `Heard a sound but did not keep it: ${decision.reason ?? 'unclear'}. Learned so far: ${
-      engine?.mode === 'teach-svaha' ? taught.positives.length : taught.negatives.length
-    }.`;
-  }
-  if (decision.type === 'taught-svaha') {
-    taught = { ...taught, positives: [...taught.positives, decision.seq] };
-    saveTaught(`Heard svāhā ${taught.positives.length}. Say it again, or tap the button to finish.`);
-  }
-  if (decision.type === 'taught-background') {
-    taught = { ...taught, negatives: [...taught.negatives, decision.seq] };
-    saveTaught(`Recording background… ${taught.negatives.length} look-alike sounds noted.`);
-  }
-}
-
-function saveTaught(message) {
-  store.saveTaught(taught);
-  engine?.setTaught(taught);
-  ui.teachStatus.textContent = message;
 }
 
 function onAudioState(state) {
@@ -188,7 +170,7 @@ async function startListening() {
     setStatus('error', denied ? MIC_DENIED_HELP : String(err.message || err));
     return false;
   }
-  engine = createEngine(mic.sampleRate, settings, taught);
+  engine = createEngine(mic.sampleRate, settings, learned);
   recorder = createRecorder(mic.sampleRate);
   wave = createWaveHistory({ windowMs: WAVE_WINDOW_MS, columnMs: WAVE_COLUMN_MS });
   audioMs = 0;
@@ -205,7 +187,7 @@ async function startListening() {
 }
 
 function stopListening() {
-  finishTeaching();
+  cancelLearning();
   mic?.stop();
   mic = null;
   engine = null;
@@ -236,50 +218,65 @@ ui.listen.addEventListener('click', async () => {
   else await startListening();
 });
 
-/* ---------- teach mode ---------- */
+/* ---------- "Learn my svāhā" ---------- */
 
-function finishTeaching() {
-  clearTimeout(backgroundTimer);
-  backgroundTimer = null;
-  ui.teachSvaha.setAttribute('aria-pressed', 'false');
-  ui.teachBackground.setAttribute('aria-pressed', 'false');
-  ui.teachSvaha.textContent = 'Teach svāhā';
-  if (engine && engine.mode !== 'count') {
-    engine.setMode('count');
-    ui.teachStatus.textContent = `Taught ${taught.positives.length} svāhā and ${taught.negatives.length} background sounds.`;
-    listeningStatus();
-  }
+const LEARN_LABEL = 'Start learning';
+
+function learnedSummary() {
+  if (!learned) return 'Not learned yet: counting with the basic "s" + "aa" listener.';
+  return `Knows ${learned.templates.length} of your svāhā (${learned.sessions} session${learned.sessions > 1 ? 's' : ''}).`;
 }
 
-async function beginTeaching(mode) {
+function learningStatus() {
+  const n = engine?.marksSinceLearning ?? 0;
+  setStatus('teaching', `Learning · chant, tap Mark after each svāhā · ${n} marked`);
+}
+
+async function startLearning() {
   if (!(await startListening())) return;
-  finishTeaching();
-  // A new teaching session replaces the old examples (e.g. re-teach in the hall).
-  taught = mode === 'teach-svaha' ? { ...taught, positives: [] } : { ...taught, negatives: [] };
-  engine.setTaught(taught);
-  engine.setMode(mode);
-  setStatus('teaching', mode === 'teach-svaha' ? 'Teaching: say svāhā…' : 'Teaching: recording background…');
+  engine.startLearning();
+  ui.settingsDialog.close();
+  ui.finishLearning.hidden = false;
+  ui.markSvaha.hidden = false;
+  learningStatus();
 }
 
-ui.teachSvaha.addEventListener('click', async () => {
-  if (engine?.mode === 'teach-svaha') return finishTeaching();
-  await beginTeaching('teach-svaha');
-  ui.teachSvaha.setAttribute('aria-pressed', 'true');
-  ui.teachSvaha.textContent = 'Finish';
-  ui.teachStatus.textContent = 'Say “svāhā” now, a few seconds apart.';
-});
+function cancelLearning() {
+  engine?.cancelLearning();
+  ui.finishLearning.hidden = true;
+  applySettings();
+}
 
-ui.teachBackground.addEventListener('click', async () => {
-  if (engine?.mode === 'teach-background') return finishTeaching();
-  await beginTeaching('teach-background');
-  ui.teachBackground.setAttribute('aria-pressed', 'true');
-  ui.teachStatus.textContent = 'Chant the mantra / talk normally, without svāhā, for 20 seconds.';
-  backgroundTimer = setTimeout(finishTeaching, BACKGROUND_TEACH_MS);
-});
+function finishLearning() {
+  if (!engine?.learning) return;
+  setStatus('teaching', 'Learning your svāhā…');
+  ui.finishLearning.hidden = true;
+  // let the status paint before the (short) number crunching
+  setTimeout(() => {
+    const earlier = ui.learnAdd.checked && learned ? learned.templates : [];
+    const result = engine.finishLearning(earlier);
+    applySettings();
+    if (result.error) {
+      setStatus('error', `${result.error} Try again: Settings → Start learning.`);
+      return;
+    }
+    learned = { templates: result.templates, threshold: result.threshold, sessions: (earlier.length ? learned.sessions : 0) + 1 };
+    store.saveLearned(learned);
+    engine.setLearned(learned);
+    const fresh = result.templates.length - earlier.length;
+    const verdict = result.quality.separated ? 'clearly different from the mantra ✓' : 'close to parts of the mantra — consider learning again';
+    setStatus('listening', `Learned ${fresh} svāhā · ${verdict}`);
+  }, 50);
+}
 
-$('clear-taught').addEventListener('click', () => {
-  taught = { positives: [], negatives: [] };
-  saveTaught('Forgot all taught sounds.');
+ui.learn.addEventListener('click', startLearning);
+ui.finishLearning.addEventListener('click', finishLearning);
+
+$('forget-learned').addEventListener('click', () => {
+  learned = null;
+  store.forgetLearned();
+  engine?.setLearned(null);
+  ui.learnStatus.textContent = learnedSummary();
 });
 
 /* ---------- saving the last minutes of sound ---------- */
@@ -310,6 +307,8 @@ function markSvaha() {
   if (!recorder || !wave) return;
   recorder.mark();
   wave.mark(audioMs);
+  engine?.mark();
+  if (engine?.learning) learningStatus();
   ui.markSvaha.textContent = `Marked ✓ (${recorder.marks().length})`;
   clearTimeout(markLabelTimer);
   markLabelTimer = setTimeout(() => (ui.markSvaha.textContent = MARK_LABEL), 1200);
@@ -383,7 +382,7 @@ function readForm() {
     minVowelMs: f.namedItem('minVowelMs').value,
     gapSeconds: f.namedItem('gapSeconds').value,
     strictness: f.namedItem('strictness').value,
-    useTaught: f.namedItem('useTaught').checked,
+    useLearned: f.namedItem('useLearned').checked,
     showLog: f.namedItem('showLog').checked,
   });
 }
@@ -391,7 +390,7 @@ function readForm() {
 function applySettings() {
   ui.log.hidden = !settings.showLog;
   ui.saveSound.hidden = !settings.showLog;
-  ui.markSvaha.hidden = !settings.showLog;
+  ui.markSvaha.hidden = !settings.showLog && !engine?.learning;
   engine?.setSettings(settings);
   renderCount();
 }
@@ -405,11 +404,10 @@ ui.form.addEventListener('input', () => {
 
 $('open-settings').addEventListener('click', () => {
   fillForm();
-  ui.teachStatus.textContent = `Taught: ${taught.positives.length} svāhā, ${taught.negatives.length} background.`;
+  ui.learnStatus.textContent = learnedSummary();
   ui.settingsDialog.showModal();
 });
 
-ui.settingsDialog.addEventListener('close', finishTeaching);
 
 /* ---------- lifecycle ---------- */
 

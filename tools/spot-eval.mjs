@@ -8,6 +8,7 @@ import { readWav } from '../tests/helpers/wav.mjs';
 import { createFeatureExtractor } from '../js/features.js';
 import { createPooler, createVectoriser, createSpotter, POOL, TEMPLATE_SECONDS } from '../js/spotter.js';
 import { scoreAgainstMarks } from './score.mjs';
+import { fileURLToPath } from 'node:url';
 
 const MARK_LAG_S = 0.05;   // the mark (key click) comes just after the svaahaa
 const NOT_NEAR_MARK_S = 2.5;
@@ -54,7 +55,8 @@ function detect(clip, templates, threshold) {
 }
 
 const fmt = (xs) => xs.map((x) => x.toFixed(2)).join(' ');
-const [flowPath, mantraPath, ...testPaths] = process.argv.slice(2);
+const runDirectly = process.argv[1] === fileURLToPath(import.meta.url);
+const [flowPath, mantraPath, ...testPaths] = runDirectly ? process.argv.slice(2) : [];
 if (flowPath) {
   const flow = vectorsOf(flowPath);
   const mantra = vectorsOf(mantraPath);

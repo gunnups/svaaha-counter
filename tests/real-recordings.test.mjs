@@ -13,7 +13,7 @@ function countsIn(file, tailSeconds = 0) {
   // optional quiet tail: the app keeps listening after the clip was saved
   const samples = new Float32Array(recorded.length + Math.round(tailSeconds * sampleRate));
   samples.set(recorded);
-  const engine = createEngine(sampleRate, SETTINGS_DEFAULTS, { positives: [], negatives: [] });
+  const engine = createEngine(sampleRate, SETTINGS_DEFAULTS, null);
   const ends = [];
   for (let i = 0; i < samples.length; i += 2048) {
     for (const d of engine.push(samples.subarray(i, i + 2048))) if (d.type === 'count') ends.push(d.event.endMs / 1000);

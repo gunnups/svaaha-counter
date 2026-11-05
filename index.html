@@ -48,6 +48,7 @@
       <div class="secondary">
         <button type="button" class="quiet" id="reset">Reset</button>
         <button type="button" class="quiet" id="open-settings">Settings</button>
+        <button type="button" class="quiet" id="finish-learning" hidden>Finish learning</button>
         <button type="button" class="quiet" id="mark-svaha" hidden title="Tap (or press Space) right after each svāhā while testing">Mark svāhā</button>
         <button type="button" class="quiet" id="save-sound" hidden>Save last 2 min of sound</button>
       </div>
@@ -75,38 +76,42 @@
         <input type="number" name="target" min="1" max="100000" inputmode="numeric">
       </label>
 
-      <label>Sensitivity <output data-for="sensitivity"></output>
-        <input type="range" name="sensitivity" min="1" max="10" step="1">
-        <small>Higher hears softer voices. Lower ignores more room noise.</small>
-      </label>
-
-      <label>Shortest svāhā (seconds) <output data-for="minVowelMs"></output>
-        <input type="range" name="minVowelMs" min="300" max="1500" step="50">
-        <small>How long “svaaahaa” must be held. Raise it if words in the mantra get counted.</small>
-      </label>
+      <fieldset>
+        <legend>Learn my svāhā (recommended)</legend>
+        <p class="hint">Tap <em>Start learning</em>, then chant about 10 rounds of mantra + svāhā the way you will
+          at the homam, tapping <em>Mark svāhā</em> (under the counter) right after each svāhā. Then tap
+          <em>Finish learning</em>. Learn on the phone or tablet you will use. With family: everyone chants, one
+          person marks, and tick the box below so their svāhā is added to yours.</p>
+        <div class="row">
+          <button type="button" id="learn">Start learning</button>
+        </div>
+        <label class="check"><input type="checkbox" id="learn-add" checked> Add to what it already learned</label>
+        <p class="hint" id="learn-status" aria-live="polite"></p>
+        <label class="check"><input type="checkbox" name="useLearned"> Count using what it learned</label>
+        <button type="button" class="quiet" id="forget-learned">Forget learned svāhā</button>
+      </fieldset>
 
       <label>Gap between counts (seconds) <output data-for="gapSeconds"></output>
         <input type="range" name="gapSeconds" min="1" max="10" step="0.5">
         <small>Two svāhās closer than this count once.</small>
       </label>
 
-      <label>Strictness <output data-for="strictness"></output>
-        <input type="range" name="strictness" min="0.7" max="1.3" step="0.1">
-        <small>Higher rejects more look-alike sounds, but may miss some svāhās.</small>
-      </label>
-
       <fieldset>
-        <legend>Teach it your voices (optional, recommended)</legend>
-        <p class="hint">Say “svāhā” 5–8 times, a few seconds apart, the way it will be said at the homam.
-          Then record 20 s of the mantra and room chatter without svāhā. Tap <em>Teach svāhā</em> once, say all
-          of them, then tap <em>Finish</em> (starting again replaces the earlier examples).</p>
-        <div class="row">
-          <button type="button" id="teach-svaha">Teach svāhā</button>
-          <button type="button" id="teach-background">Teach background (20 s)</button>
-        </div>
-        <p class="hint" id="teach-status" aria-live="polite"></p>
-        <label class="check"><input type="checkbox" name="useTaught"> Use what it was taught</label>
-        <button type="button" class="quiet" id="clear-taught">Forget taught sounds</button>
+        <legend>Basic listener (used until it learns)</legend>
+        <label>Sensitivity <output data-for="sensitivity"></output>
+          <input type="range" name="sensitivity" min="1" max="10" step="1">
+          <small>Higher hears softer voices. Lower ignores more room noise.</small>
+        </label>
+
+        <label>Shortest svāhā (seconds) <output data-for="minVowelMs"></output>
+          <input type="range" name="minVowelMs" min="300" max="1500" step="50">
+          <small>How long “svaaahaa” must be held. Raise it if words in the mantra get counted.</small>
+        </label>
+
+        <label>Strictness <output data-for="strictness"></output>
+          <input type="range" name="strictness" min="0.7" max="1.3" step="0.1">
+          <small>Higher rejects more look-alike sounds, but may miss some svāhās.</small>
+        </label>
       </fieldset>
 
       <fieldset>
