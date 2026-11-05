@@ -14,6 +14,7 @@
   --wave-svaha: #f0832a;
   --wave-mark: #f4ead6;
   --wave-height: 3.5rem;
+  --mark-size: 6.5rem;
 
   --font-numeral: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -341,22 +342,47 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
   border-color: var(--gold);
 }
 
-.learn-row { display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem; }
-.learn-row[hidden] { display: none; }
-.mark-big {
-  width: 7rem;
-  height: 7rem;
+.mark-row { display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem; }
+.mark-row[hidden], .mark-row [hidden] { display: none; }
+.mark-wrap { margin: 0; display: grid; justify-items: center; gap: 0.35rem; }
+.mark-wrap figcaption { color: var(--ink-dim); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.mark-fire {
+  width: var(--mark-size);
+  height: var(--mark-size);
   padding: 0;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #1a1206;
-  background: radial-gradient(circle at 35% 30%, #f7b067, var(--saffron) 55%, #b85a14);
-  border: 2px solid rgb(244 234 214 / 0.35);
-  box-shadow: 0 0 0 0.35rem rgb(240 131 42 / 0.15), 0 12px 30px rgb(240 131 42 / 0.25);
+  background: radial-gradient(circle at 40% 30%, #fff, #f4ead6 70%, #ddd0b6);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 0.35rem rgb(244 234 214 / 0.12), 0 12px 30px rgb(240 131 42 / 0.3);
 }
-.mark-big:active { transform: scale(0.92); box-shadow: 0 0 0 0.6rem rgb(240 131 42 / 0.3); }
+.mark-fire svg { width: 62%; height: 62%; }
+.mark-fire:active { transform: scale(0.92); }
+.mark-fire.flash { animation: offer 600ms var(--ease); }
+@keyframes offer {
+  0%   { box-shadow: 0 0 0 0.9rem rgb(240 131 42 / 0.55), 0 0 50px rgb(240 131 42 / 0.8); }
+  100% { box-shadow: 0 0 0 0.35rem rgb(244 234 214 / 0.12), 0 12px 30px rgb(240 131 42 / 0.3); }
+}
+
+/* ---- Rising flame above each counted svaahaa, pace line at the bottom ---- */
+.wave-canvas { position: relative; flex: 1; min-width: 0; display: flex; }
+.wave-fx { position: absolute; inset: 0; pointer-events: none; }
+.rising-flame {
+  position: absolute;
+  top: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-left: -0.65rem;
+  filter: drop-shadow(0 0 6px rgb(240 131 42 / 0.8));
+  animation: rise 1.8s ease-out forwards;
+}
+@keyframes rise {
+  0%   { transform: translate(0, -20%) scale(0.6); opacity: 0; }
+  15%  { transform: translate(calc(var(--drift) * 0.15), -45%) scale(1); opacity: 1; }
+  100% { transform: translate(var(--drift), -170%) scale(0.7); opacity: 0; }
+}
+.pace { margin: 0.3rem 0 0; color: var(--ink-dim); font-size: 0.85rem; font-variant-numeric: tabular-nums; text-align: center; }
 
 /* ---- Landscape: Devi on the left, count on the right ---- */
 @media (orientation: landscape) {
@@ -375,10 +401,11 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
   .tally { gap: 0.2rem; padding: 0.5rem; }
   .nudge, .primary { min-height: 2.8rem; height: 2.8rem; }
   .nudge { width: 2.8rem; }
-  .mark-big { width: 5rem; height: 5rem; font-size: 0.95rem; }
+  :root { --mark-size: 4.6rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .count.bump { animation: none; }
+  .count.bump, .mark-fire.flash { animation: none; }
+  .rising-flame { display: none; }
   * { transition: none !important; }
 }

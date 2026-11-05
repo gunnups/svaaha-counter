@@ -1,6 +1,6 @@
 // Keeps the app working with no internet (e.g. weak signal in the hall).
 // Bump VERSION whenever any app file changes so phones pick up the update.
-const VERSION = 'svaha-v15';
+const VERSION = 'svaha-v16';
 const FILES = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const FILES = [
   './js/engine.js',
   './js/features.js',
   './js/recorder.js',
+  './js/pace.js',
   './js/store.js',
   './js/learn.js',
   './js/spotter.js',

@@ -4,7 +4,7 @@
 import { SETTINGS_DEFAULTS } from './engine.js';
 import { NUM_BANDS } from './features.js';
 
-const KEYS = { count: 'svaha.count', settings: 'svaha.settings.v3', oldSettings: 'svaha.settings.v2', learned: 'svaha.learned' };
+const KEYS = { count: 'svaha.count', elapsed: 'svaha.elapsedMs', pace: 'svaha.pace', settings: 'svaha.settings.v3', oldSettings: 'svaha.settings.v2', learned: 'svaha.learned' };
 const MAX_TEMPLATES = 60;    // keep the most recent examples (e.g. solo + a couple of group sessions)
 const ROUND = 100;          // store vector values to 2 decimals (keeps storage small)
 
@@ -32,6 +32,24 @@ export function loadCount() {
 }
 
 export const saveCount = (n) => write(KEYS.count, n);
+
+/** Listening time since the count was last reset (for the average / total line). */
+export function loadElapsed() {
+  const ms = Number(read(KEYS.elapsed));
+  return Number.isFinite(ms) && ms >= 0 ? ms : 0;
+}
+
+export const saveElapsed = (ms) => write(KEYS.elapsed, Math.round(ms));
+
+/** Running average of a round (mantra + svaahaa), and how many rounds went into it. */
+export function loadPace() {
+  const raw = read(KEYS.pace);
+  const avgMs = Number(raw?.avgMs);
+  const rounds = Number(raw?.rounds);
+  return Number.isFinite(avgMs) && avgMs > 0 && Number.isInteger(rounds) && rounds > 0 ? { avgMs, rounds } : { avgMs: 0, rounds: 0 };
+}
+
+export const savePace = (pace) => write(KEYS.pace, { avgMs: Math.round(pace.avgMs), rounds: pace.rounds });
 
 const clamp = (v, lo, hi, fallback) => {
   const n = Number(v);

@@ -31,8 +31,8 @@ try {
   await page.click('#test-toggle'); // Test: the log proves which listener counted
   check((await page.textContent('#learn-ask-title')).includes('first'), 'a device that has not learned is offered learning');
   await page.click('#learn-ask-yes');
-  await page.waitForSelector('#mark-big', { state: 'visible' });
-  check(await page.isHidden('#mark-svaha'), 'only the big Mark button shows while learning');
+  await page.waitForSelector('#finish-learning', { state: 'visible' });
+  check(await page.isVisible('#mark-svaha'), 'learning shows the fire Mark button and Finish learning');
   for (let k = 0; k < LEARN_ROUNDS; k++) {
     await atSceneTime(svahaEnd(k) + MARK_DELAY_S);
     await page.keyboard.press('Space');
@@ -48,12 +48,28 @@ try {
   check(stored?.templates?.length === LEARN_ROUNDS && stored.threshold > 0, 'saved on the device');
 
   check(Number(await page.textContent('#count')) === 0, 'count restarts at 0 when learning finishes');
-  check(await page.isHidden('#learn-row'), 'big Mark button goes away after learning');
+  check(await page.isHidden('#finish-learning'), 'Finish learning goes away after learning');
+  check((await page.textContent('#pace')).includes('Total 0 min'), 'pace line restarts with the count');
+  const flame = await page.waitForSelector('.rising-flame', { state: 'attached', timeout: 30000 }).catch(() => null);
+  check(Boolean(flame), 'a flame rises from the first svāhā counted after learning');
+  await page.waitForTimeout(400);
+  const saffron = await page.evaluate(() => {
+    const c = document.getElementById('wave');
+    const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i] === 240 && px[i + 1] === 131 && px[i + 2] === 42 && px[i + 3] > 200) n++;
+    return n;
+  });
+  check(saffron > 0, `counted svāhā shows orange on the sound picture after learning (${saffron} px)`);
   await atSceneTime(scene.length / SR + 2.5);
   const count = Number(await page.textContent('#count'));
   const log = await page.$$eval('#log li', (lis) => lis.map((li) => li.textContent).reverse().slice(-6));
   console.log(log.join('\n'));
   check(count === COUNT_ROUNDS, `counted ${count} of the next ${COUNT_ROUNDS} rounds with what it learned`);
+  const paceText = await page.textContent('#pace');
+  const avg = Number((paceText.match(/Average ([\d.]+) s/) || [])[1]);
+  console.log('pace:', paceText, '| mantra + svāhā is', (m + PAUSE_BEFORE_SVAHA_S + s).toFixed(1), 's');
+  check(Math.abs(avg - (m + PAUSE_BEFORE_SVAHA_S + s)) < 1.5, 'average is the length of mantra + svāhā, not counting the pauses');
   const afterReset = log.filter((l) => l.includes('count')).slice(-COUNT_ROUNDS);
   check(afterReset.every((l) => l.includes('matched your svāhā')), 'counts after learning came from the learned svāhā');
 } finally {

@@ -58,3 +58,34 @@ test('mantra + svaahaa cycles count right with non-stop chatter ~23 dB quieter',
   const busy = mix(withRoom(parts), scale(talk.samples, 0.06), 1);
   assert.equal(counts(run(busy)), 3);
 });
+
+test('after learning mid-session, counts are placed at the real time of each svaahaa', async () => {
+  const { createEngine, SETTINGS_DEFAULTS } = await import('../js/engine.js');
+  const LEAD = 20; // listening for a while before learning starts
+  const m = mantra.samples.length / SR;
+  const s = svaha.samples.length / SR;
+  const round = m + 0.15 + s + 3;
+  const parts = [LEAD];
+  for (let i = 0; i < 9; i++) parts.push(mantra.samples, 0.15, svaha.samples, 3);
+  const audio = withRoom(parts);
+  const svahaEnd = (k) => LEAD + k * round + m + 0.15 + s;
+  const engine = createEngine(SR, SETTINGS_DEFAULTS, null);
+  const ends = [];
+  let marked = 0;
+  for (let i = 0; i < audio.length; i += 2048) {
+    const nowS = i / SR;
+    if (nowS >= LEAD - 1 && !engine.learning && marked === 0) engine.startLearning();
+    if (marked < 6 && nowS >= svahaEnd(marked) + 0.15) {
+      engine.mark();
+      marked++;
+      if (marked === 6) {
+        const result = engine.finishLearning();
+        assert.ok(!result.error, result.error);
+        engine.setLearned(result);
+      }
+    }
+    for (const d of engine.push(audio.subarray(i, i + 2048))) if (d.type === 'count' && marked === 6) ends.push(d.event.endMs / 1000);
+  }
+  assert.equal(ends.length, 3, `counts at ${ends}`);
+  ends.forEach((t, i) => assert.ok(Math.abs(t - svahaEnd(6 + i)) < 1, `count at ${t.toFixed(1)} s, svaahaa ended at ${svahaEnd(6 + i).toFixed(1)} s`));
+});

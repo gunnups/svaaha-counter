@@ -67,7 +67,7 @@ export function createEngine(sampleRate, settings, learned = null) {
   function useLearned(next) {
     lastLearned = next;
     spotter = next && next.templates.length
-      ? createSpotter(next.templates, { threshold: next.threshold, minGapMs: current.gapSeconds * 1000 }, pooledHopMs)
+      ? createSpotter(next.templates, { threshold: next.threshold, minGapMs: current.gapSeconds * 1000, startMs: t }, pooledHopMs)
       : null;
   }
   useLearned(learned);

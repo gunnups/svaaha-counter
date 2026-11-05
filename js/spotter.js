@@ -83,12 +83,13 @@ function createMatcher(template) {
 
 /**
  * @param {Float32Array[][]} templates  svaahaa examples (sequences of vectors)
- * @param {{threshold: number, minGapMs?: number, settleMs?: number}} options
+ * @param {{threshold: number, minGapMs?: number, settleMs?: number, startMs?: number}} options
+ *   startMs: listening time when the spotter is created (it may start mid-session, after learning)
  * @param {number} pooledHopMs  time between pooled frames
  */
-export function createSpotter(templates, { threshold, minGapMs = 2500, settleMs = 250 }, pooledHopMs) {
+export function createSpotter(templates, { threshold, minGapMs = 2500, settleMs = 250, startMs = 0 }, pooledHopMs) {
   const matchers = templates.map(createMatcher);
-  let t = 0;
+  let t = startMs;
   let best = null; // lowest cost of the current dip below threshold: { cost, atMs }
   let lastHitMs = -Infinity;
   let lastCost = Infinity;

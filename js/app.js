@@ -6,6 +6,7 @@ import { createWaveHistory } from './wave.js';
 import { createWaveView } from './wave-view.js';
 import * as store from './store.js';
 import { createRecorder, MAX_SECONDS } from './recorder.js';
+import { paceLine, addRound, createRoundTimer, NO_PACE } from './pace.js';
 
 const SAVE_LABEL = `Save last ${MAX_SECONDS / 60} min of sound`;
 const MARK_LABEL = 'Mark svāhā';
@@ -36,8 +37,9 @@ const ui = {
   finishLearning: $('finish-learning'),
   saveSound: $('save-sound'),
   markSvaha: $('mark-svaha'),
-  markBig: $('mark-big'),
-  learnRow: $('learn-row'),
+  markRow: $('mark-row'),
+  markCaption: $('mark-caption'),
+  pace: $('pace'),
   testToggle: $('test-toggle'),
   learnAsk: $('learn-ask'),
   learnAskTitle: $('learn-ask-title'),
@@ -49,6 +51,11 @@ const ui = {
 const waveView = createWaveView($('wave'), $('wave-start'), $('wave-end'));
 
 let count = store.loadCount();
+let elapsedMs = store.loadElapsed(); // listening time since the count was last reset
+let elapsedSavedAt = 0;
+let pace = store.loadPace();          // average round (mantra + svaahaa) and how many were measured
+let roundTimer = createRoundTimer();
+const ELAPSED_SAVE_MS = 5000;
 let settings = store.loadSettings();
 let learned = store.loadLearned();
 let mic = null;
@@ -71,13 +78,30 @@ let heardTimer = null;
 function setCount(next, bump = false) {
   count = Math.max(0, next);
   store.saveCount(count);
+  store.saveElapsed(elapsedMs);
   renderCount(bump);
+}
+
+/** Count and its clock back to zero (Reset, or a finished learning session). */
+function resetTally() {
+  elapsedMs = 0;
+  pace = NO_PACE;
+  store.savePace(pace);
+  roundTimer.restart(audioMs);
+  setCount(0);
+  startSession(Date.now());
+}
+
+function renderPace() {
+  const text = paceLine(pace, elapsedMs);
+  if (ui.pace.textContent !== text) ui.pace.textContent = text;
 }
 
 function renderCount(bump = false) {
   ui.count.textContent = String(count);
   ui.target.textContent = String(settings.target);
   ui.progress.style.transform = `scaleX(${Math.min(1, count / settings.target)})`;
+  renderPace();
   if (bump) {
     ui.count.classList.remove('bump');
     void ui.count.offsetWidth; // restart the animation
@@ -138,7 +162,35 @@ function handle(decision) {
   if (decision.type === 'count') {
     setCount(count + 1, true);
     wave?.markSvaha(decision.event.startMs, decision.event.endMs);
+    riseFlame(decision.event);
+    const roundMs = roundTimer.counted(decision.event.endMs);
+    if (roundMs) {
+      pace = addRound(pace, roundMs);
+      store.savePace(pace);
+    }
   }
+}
+
+const FLAME_MS = 1800; // matches the "rise" animation in app.css
+
+/** A small flame floats up from the counted svaahaa on the sound picture (as it scrolls left). */
+function riseFlame(event) {
+  const fx = $('wave-fx');
+  const width = fx.clientWidth;
+  if (!width) return;
+  const centreAgoMs = audioMs - (event.startMs + event.endMs) / 2;
+  const x = Math.min(1, Math.max(0, 1 - centreAgoMs / WAVE_WINDOW_MS));
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const flame = document.createElementNS(svgNs, 'svg');
+  flame.setAttribute('class', 'rising-flame');
+  flame.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(svgNs, 'use');
+  use.setAttribute('href', '#flame');
+  flame.append(use);
+  flame.style.left = `${(x * 100).toFixed(1)}%`;
+  flame.style.setProperty('--drift', `${(-width * FLAME_MS / WAVE_WINDOW_MS).toFixed(1)}px`);
+  fx.append(flame);
+  setTimeout(() => flame.remove(), FLAME_MS + 100);
 }
 
 function onAudioState(state) {
@@ -167,9 +219,17 @@ function onSamples(samples) {
     const block = samples.subarray(i, i + WAVE_BLOCK);
     let energy = 0;
     for (const v of block) energy += v * v;
-    wave.add(audioMs + (i / mic.sampleRate) * 1000, Math.sqrt(energy / block.length), isVoice);
+    const atMs = audioMs + (i / mic.sampleRate) * 1000;
+    wave.add(atMs, Math.sqrt(energy / block.length), isVoice);
+    roundTimer.voice(atMs, isVoice);
   }
-  audioMs += (samples.length / mic.sampleRate) * 1000;
+  const chunkMs = (samples.length / mic.sampleRate) * 1000;
+  audioMs += chunkMs;
+  if (!engine.learning) elapsedMs += chunkMs; // learning time is not homam time
+  if (elapsedMs - elapsedSavedAt > ELAPSED_SAVE_MS) {
+    elapsedSavedAt = elapsedMs;
+    store.saveElapsed(elapsedMs);
+  }
   chunkAt = performance.now();
 }
 
@@ -187,6 +247,7 @@ async function startListening() {
   recorder = createRecorder(mic.sampleRate);
   wave = createWaveHistory({ windowMs: WAVE_WINDOW_MS, columnMs: WAVE_COLUMN_MS });
   audioMs = 0;
+  roundTimer = createRoundTimer(); // the listening clock starts again at 0
   chunkAt = performance.now();
   wallStart = Date.now();
   startSession(wallStart);
@@ -217,6 +278,7 @@ function drawMeter() {
   ui.meter.style.transform = `scaleX(${engine.level.toFixed(3)})`;
   const nowMs = audioMs + Math.min(MAX_SMOOTH_MS, performance.now() - chunkAt);
   waveView.draw(wave, nowMs, wallStart + nowMs, sessionStart);
+  renderPace();
   requestAnimationFrame(drawMeter);
 }
 
@@ -309,8 +371,7 @@ function finishLearning() {
     engine.setLearned(learned);
     const fresh = result.templates.length - earlier.length;
     const verdict = result.quality.separated ? 'clearly different from the mantra ✓' : 'close to parts of the mantra — consider learning again';
-    setCount(0);
-    startSession(Date.now());
+    resetTally();
     setStatus('listening', `Learned ${fresh} svāhā · ${verdict} · count starts at 0`);
   }, 50);
 }
@@ -356,18 +417,16 @@ function markSvaha() {
   engine?.mark();
   if (engine?.learning) learningStatus();
   const n = engine?.learning ? engine.marksSinceLearning : recorder.marks().length;
-  ui.markSvaha.textContent = `Marked ✓ (${n})`;
-  ui.markBig.innerHTML = `✓<br>${n}`;
+  ui.markCaption.textContent = `Marked ✓ ${n}`;
+  ui.markSvaha.classList.remove('flash');
+  void ui.markSvaha.offsetWidth; // restart the flash
+  ui.markSvaha.classList.add('flash');
   clearTimeout(markLabelTimer);
-  markLabelTimer = setTimeout(() => {
-    ui.markSvaha.textContent = MARK_LABEL;
-    ui.markBig.innerHTML = 'Mark<br>svāhā';
-  }, 1200);
+  markLabelTimer = setTimeout(() => (ui.markCaption.textContent = MARK_LABEL), 1200);
 }
 
 let markLabelTimer = null;
 ui.markSvaha.addEventListener('click', markSvaha);
-ui.markBig.addEventListener('click', markSvaha);
 // Space = mark, everywhere on the main screen. (A focused button would otherwise take
 // Space as a click - e.g. Start/Stop - so the key is always claimed here.)
 const spaceIsMark = (e) => e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !document.querySelector('dialog[open]');
@@ -391,9 +450,7 @@ $('reset').addEventListener('click', () => {
 });
 
 ui.resetDialog.addEventListener('close', () => {
-  if (ui.resetDialog.returnValue !== 'reset') return;
-  setCount(0);
-  startSession(Date.now());
+  if (ui.resetDialog.returnValue === 'reset') resetTally();
 });
 
 function startSession(atMs) {
@@ -443,8 +500,8 @@ function applySettings() {
   const learning = Boolean(engine?.learning);
   ui.log.hidden = !settings.showLog;
   ui.saveSound.hidden = !settings.showLog;
-  ui.markSvaha.hidden = !settings.showLog || learning; // learning has its own big button
-  ui.learnRow.hidden = !learning;
+  ui.markRow.hidden = !settings.showLog && !learning; // the fire button: testing or learning
+  ui.finishLearning.hidden = !learning;
   ui.testToggle.setAttribute('aria-checked', String(settings.showLog));
   engine?.setSettings(settings);
   renderCount();
