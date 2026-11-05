@@ -13,7 +13,7 @@ export const SETTINGS_DEFAULTS = Object.freeze({
   strictness: 1,        // 0.7 (lenient) .. 1.3 (strict): steadiness of the "aa"
   useLearned: true,     // count with "Learn my svaahaa" once this device has learned
   target: 1008,
-  showLog: true,        // on while the app is being tuned with real voices
+  showLog: false,       // testing view: what it hears, Mark and Save buttons
 });
 
 /** Sensitivity 1..10 -> dB above background (higher sensitivity = smaller margin). */

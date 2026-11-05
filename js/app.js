@@ -89,8 +89,11 @@ function listeningStatus() {
   setStatus('listening', `Listening${how}`);
 }
 
+const LOG_MIN_MS = 300; // tiny fragments mean nothing to a person; don't list them
+
 function addLog(decision) {
   if (!settings.showLog) return;
+  if (decision.type !== 'count' && decision.event.vowelMs < LOG_MIN_MS) return;
   const li = document.createElement('li');
   li.dataset.type = decision.type;
   const time = new Date().toLocaleTimeString([], { hour12: false });

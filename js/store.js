@@ -4,7 +4,7 @@
 import { SETTINGS_DEFAULTS } from './engine.js';
 import { NUM_BANDS } from './features.js';
 
-const KEYS = { count: 'svaha.count', settings: 'svaha.settings.v2', oldSettings: 'svaha.settings', learned: 'svaha.learned' };
+const KEYS = { count: 'svaha.count', settings: 'svaha.settings.v3', oldSettings: 'svaha.settings.v2', learned: 'svaha.learned' };
 const MAX_TEMPLATES = 60;    // keep the most recent examples (e.g. solo + a couple of group sessions)
 const ROUND = 100;          // store vector values to 2 decimals (keeps storage small)
 
@@ -55,9 +55,9 @@ export function sanitizeSettings(raw) {
 export function loadSettings() {
   const current = read(KEYS.settings);
   if (current) return sanitizeSettings(current);
-  // Detection defaults changed in v2: keep only the personal choices from v1.
+  // v3 hides the testing view by default: keep only the personal choices from before.
   const old = read(KEYS.oldSettings) || {};
-  return sanitizeSettings({ target: old.target });
+  return sanitizeSettings({ target: old.target, gapSeconds: old.gapSeconds });
 }
 export const saveSettings = (s) => write(KEYS.settings, sanitizeSettings(s));
 
