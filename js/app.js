@@ -36,6 +36,14 @@ const ui = {
   finishLearning: $('finish-learning'),
   saveSound: $('save-sound'),
   markSvaha: $('mark-svaha'),
+  markBig: $('mark-big'),
+  learnRow: $('learn-row'),
+  testToggle: $('test-toggle'),
+  learnAsk: $('learn-ask'),
+  learnAskTitle: $('learn-ask-title'),
+  learnAskText: $('learn-ask-text'),
+  learnAskYes: $('learn-ask-yes'),
+  learnAskNo: $('learn-ask-no'),
 };
 
 const waveView = createWaveView($('wave'), $('wave-start'), $('wave-end'));
@@ -123,6 +131,8 @@ function noteHeard(decision) {
 }
 
 function handle(decision) {
+  // while learning, the person's marks are the truth; the count restarts when learning ends
+  if (engine?.learning && decision.type === 'count') return;
   addLog(decision);
   noteHeard(decision);
   if (decision.type === 'count') {
@@ -235,28 +245,59 @@ function learningStatus() {
   setStatus('teaching', `Learning · chant, tap Mark after each svāhā · ${n} marked`);
 }
 
-async function startLearning() {
+let learningReplaces = false; // "Learn again" from the Test switch starts over instead of adding
+
+async function startLearning({ replace = false } = {}) {
   if (!(await startListening())) return;
+  learningReplaces = replace;
   engine.startLearning();
   ui.settingsDialog.close();
-  ui.finishLearning.hidden = false;
-  ui.markSvaha.hidden = false;
+  applySettings();
   learningStatus();
 }
 
 function cancelLearning() {
   engine?.cancelLearning();
-  ui.finishLearning.hidden = true;
   applySettings();
 }
+
+/** Test switch turned on: offer to learn (or learn again) on this device. */
+function askAboutLearning() {
+  if (engine?.learning) return;
+  if (learned) {
+    ui.learnAskTitle.textContent = 'Learn your svāhā again?';
+    ui.learnAskText.textContent = `This device already knows ${learned.templates.length} of your svāhā. ` +
+      'Learning again replaces them: chant about 10 rounds and tap the big Mark svāhā button after each svāhā.';
+    ui.learnAskYes.textContent = 'Learn again';
+    ui.learnAskNo.textContent = 'Keep what it knows';
+  } else {
+    ui.learnAskTitle.textContent = 'Learn your svāhā first?';
+    ui.learnAskText.textContent = 'This device has not learned your svāhā yet, so it counts with the basic listener. ' +
+      'To learn: chant about 10 rounds and tap the big Mark svāhā button after each svāhā.';
+    ui.learnAskYes.textContent = 'Start learning';
+    ui.learnAskNo.textContent = 'Not now';
+  }
+  ui.learnAsk.showModal();
+}
+
+ui.learnAsk.addEventListener('close', () => {
+  if (ui.learnAsk.returnValue === 'yes') startLearning({ replace: true });
+});
+
+ui.testToggle.addEventListener('click', () => {
+  settings = { ...settings, showLog: !settings.showLog };
+  store.saveSettings(settings);
+  if (!settings.showLog) cancelLearning();
+  applySettings();
+  if (settings.showLog) askAboutLearning();
+});
 
 function finishLearning() {
   if (!engine?.learning) return;
   setStatus('teaching', 'Learning your svāhā…');
-  ui.finishLearning.hidden = true;
   // let the status paint before the (short) number crunching
   setTimeout(() => {
-    const earlier = ui.learnAdd.checked && learned ? learned.templates : [];
+    const earlier = !learningReplaces && ui.learnAdd.checked && learned ? learned.templates : [];
     const result = engine.finishLearning(earlier);
     applySettings();
     if (result.error) {
@@ -268,11 +309,13 @@ function finishLearning() {
     engine.setLearned(learned);
     const fresh = result.templates.length - earlier.length;
     const verdict = result.quality.separated ? 'clearly different from the mantra ✓' : 'close to parts of the mantra — consider learning again';
-    setStatus('listening', `Learned ${fresh} svāhā · ${verdict}`);
+    setCount(0);
+    startSession(Date.now());
+    setStatus('listening', `Learned ${fresh} svāhā · ${verdict} · count starts at 0`);
   }, 50);
 }
 
-ui.learn.addEventListener('click', startLearning);
+ui.learn.addEventListener('click', () => startLearning());
 ui.finishLearning.addEventListener('click', finishLearning);
 
 $('forget-learned').addEventListener('click', () => {
@@ -312,13 +355,19 @@ function markSvaha() {
   wave.mark(audioMs);
   engine?.mark();
   if (engine?.learning) learningStatus();
-  ui.markSvaha.textContent = `Marked ✓ (${recorder.marks().length})`;
+  const n = engine?.learning ? engine.marksSinceLearning : recorder.marks().length;
+  ui.markSvaha.textContent = `Marked ✓ (${n})`;
+  ui.markBig.innerHTML = `✓<br>${n}`;
   clearTimeout(markLabelTimer);
-  markLabelTimer = setTimeout(() => (ui.markSvaha.textContent = MARK_LABEL), 1200);
+  markLabelTimer = setTimeout(() => {
+    ui.markSvaha.textContent = MARK_LABEL;
+    ui.markBig.innerHTML = 'Mark<br>svāhā';
+  }, 1200);
 }
 
 let markLabelTimer = null;
 ui.markSvaha.addEventListener('click', markSvaha);
+ui.markBig.addEventListener('click', markSvaha);
 // Space = mark, everywhere on the main screen. (A focused button would otherwise take
 // Space as a click - e.g. Start/Stop - so the key is always claimed here.)
 const spaceIsMark = (e) => e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !document.querySelector('dialog[open]');
@@ -386,14 +435,17 @@ function readForm() {
     gapSeconds: f.namedItem('gapSeconds').value,
     strictness: f.namedItem('strictness').value,
     useLearned: f.namedItem('useLearned').checked,
-    showLog: f.namedItem('showLog').checked,
+    showLog: settings.showLog, // set by the Test switch on the main screen
   });
 }
 
 function applySettings() {
+  const learning = Boolean(engine?.learning);
   ui.log.hidden = !settings.showLog;
   ui.saveSound.hidden = !settings.showLog;
-  ui.markSvaha.hidden = !settings.showLog && !engine?.learning;
+  ui.markSvaha.hidden = !settings.showLog || learning; // learning has its own big button
+  ui.learnRow.hidden = !learning;
+  ui.testToggle.setAttribute('aria-checked', String(settings.showLog));
   engine?.setSettings(settings);
   renderCount();
 }

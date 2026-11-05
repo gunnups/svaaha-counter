@@ -45,10 +45,14 @@
         <button type="button" class="primary" id="listen">Start</button>
         <button type="button" class="nudge" id="plus" aria-label="Add one">+1</button>
       </div>
+      <div class="learn-row" id="learn-row" hidden>
+        <button type="button" class="mark-big" id="mark-big" title="Tap (or press Space) right after each svāhā">Mark<br>svāhā</button>
+        <button type="button" class="quiet" id="finish-learning">Finish learning</button>
+      </div>
       <div class="secondary">
         <button type="button" class="quiet" id="reset">Reset</button>
         <button type="button" class="quiet" id="open-settings">Settings</button>
-        <button type="button" class="quiet" id="finish-learning" hidden>Finish learning</button>
+        <button type="button" class="quiet switch" id="test-toggle" role="switch" aria-checked="false">Test</button>
         <button type="button" class="quiet" id="mark-svaha" hidden title="Tap (or press Space) right after each svāhā while testing">Mark svāhā</button>
         <button type="button" class="quiet" id="save-sound" hidden>Save last 2 min of sound</button>
       </div>
@@ -64,6 +68,17 @@
       <div class="row">
         <button value="cancel" class="quiet">Keep counting</button>
         <button value="reset" class="danger">Reset</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="learn-ask" class="sheet">
+    <form method="dialog">
+      <h2 id="learn-ask-title">Learn your svāhā?</h2>
+      <p class="hint" id="learn-ask-text"></p>
+      <div class="row">
+        <button value="no" class="quiet" id="learn-ask-no">Not now</button>
+        <button value="yes" class="primary" id="learn-ask-yes">Start learning</button>
       </div>
     </form>
   </dialog>
@@ -112,13 +127,6 @@
           <input type="range" name="strictness" min="0.7" max="1.3" step="0.1">
           <small>Higher rejects more look-alike sounds, but may miss some svāhās.</small>
         </label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Testing</legend>
-        <label class="check"><input type="checkbox" name="showLog"> Show testing tools (what it hears, Mark svāhā, Save sound)</label>
-        <p class="hint">While listening, the app keeps the last 2 minutes of sound. If it misses a svāhā,
-          tap <em>Save last 2 min of sound</em> under the counter; the .wav file can be used to tune the app.</p>
       </fieldset>
 
       <div class="row">

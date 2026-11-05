@@ -324,6 +324,40 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .sheet fieldset .row { justify-content: flex-start; }
 #finish-learning { color: var(--saffron); }
 
+/* ---- Test switch and learning mode ---- */
+.switch { display: inline-flex; align-items: center; gap: 0.45rem; }
+.switch::before {
+  content: "";
+  width: 1.9rem;
+  height: 1.1rem;
+  border-radius: var(--radius);
+  background: var(--surface) radial-gradient(circle at 0.55rem 50%, var(--ink-dim) 0.38rem, transparent 0.4rem);
+  border: 1px solid var(--line);
+  transition: background-position 160ms var(--ease), background-color 160ms;
+}
+.switch[aria-checked="true"] { color: var(--gold); }
+.switch[aria-checked="true"]::before {
+  background: var(--gold-deep) radial-gradient(circle at 1.35rem 50%, var(--ink) 0.38rem, transparent 0.4rem);
+  border-color: var(--gold);
+}
+
+.learn-row { display: flex; align-items: center; gap: 1rem; margin-top: 0.4rem; }
+.learn-row[hidden] { display: none; }
+.mark-big {
+  width: 7rem;
+  height: 7rem;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a1206;
+  background: radial-gradient(circle at 35% 30%, #f7b067, var(--saffron) 55%, #b85a14);
+  border: 2px solid rgb(244 234 214 / 0.35);
+  box-shadow: 0 0 0 0.35rem rgb(240 131 42 / 0.15), 0 12px 30px rgb(240 131 42 / 0.25);
+}
+.mark-big:active { transform: scale(0.92); box-shadow: 0 0 0 0.6rem rgb(240 131 42 / 0.3); }
+
 /* ---- Landscape: Devi on the left, count on the right ---- */
 @media (orientation: landscape) {
   .stage {
@@ -341,6 +375,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
   .tally { gap: 0.2rem; padding: 0.5rem; }
   .nudge, .primary { min-height: 2.8rem; height: 2.8rem; }
   .nudge { width: 2.8rem; }
+  .mark-big { width: 5rem; height: 5rem; font-size: 0.95rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

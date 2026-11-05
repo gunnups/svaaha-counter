@@ -1,5 +1,6 @@
 // End-to-end "Learn my svaahaa": in real Chrome, learn from 6 marked rounds (Space after
-// each svaahaa), finish, reset, and check the next 3 rounds are counted by what was learned.
+// each svaahaa) started from the Test switch, finish (count restarts at 0), and check the next
+// 3 rounds are counted by what was learned.
 // Run: npm run e2e:learn
 import { svaha, mantra, SR, withRoom } from '../scenes.mjs';
 import { openApp } from './harness.mjs';
@@ -27,9 +28,11 @@ const check = (ok, what) => {
   if (!ok) failed = true;
 };
 try {
-  await page.click('#open-settings');
-  await page.check('input[name="showLog"]'); // testing tools: the log proves which listener counted
-  await page.click('#learn');
+  await page.click('#test-toggle'); // Test: the log proves which listener counted
+  check((await page.textContent('#learn-ask-title')).includes('first'), 'a device that has not learned is offered learning');
+  await page.click('#learn-ask-yes');
+  await page.waitForSelector('#mark-big', { state: 'visible' });
+  check(await page.isHidden('#mark-svaha'), 'only the big Mark button shows while learning');
   for (let k = 0; k < LEARN_ROUNDS; k++) {
     await atSceneTime(svahaEnd(k) + MARK_DELAY_S);
     await page.keyboard.press('Space');
@@ -44,8 +47,8 @@ try {
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('svaha.learned')));
   check(stored?.templates?.length === LEARN_ROUNDS && stored.threshold > 0, 'saved on the device');
 
-  await page.click('#reset');
-  await page.click('#confirm-reset button[value="reset"]');
+  check(Number(await page.textContent('#count')) === 0, 'count restarts at 0 when learning finishes');
+  check(await page.isHidden('#learn-row'), 'big Mark button goes away after learning');
   await atSceneTime(scene.length / SR + 2.5);
   const count = Number(await page.textContent('#count'));
   const log = await page.$$eval('#log li', (lis) => lis.map((li) => li.textContent).reverse().slice(-6));

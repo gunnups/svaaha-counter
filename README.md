@@ -11,12 +11,17 @@ end of the mantra, and then counts by comparing whole words — so fast or drawn
 svāhā running straight on from the mantra, are all fine. It learns on the device you use and keeps
 what it learned only on that device.
 
-1. Settings → **Start learning**.
-2. Chant about 10 rounds of mantra + svāhā as you will at the homam. Right after each svāhā tap
-   **Mark svāhā** (under the counter; on a computer you can press Space).
-3. Tap **Finish learning**. It tells you how many it learned and whether they stand apart from the mantra.
-4. With family: everyone chants together, one person marks. Keep **Add to what it already learned**
-   ticked so the group's svāhā join yours.
+1. Switch on **Test** under the counter and choose **Start learning** (or **Learn again**).
+   Settings → **Start learning** does the same.
+2. Chant about 10 rounds of mantra + svāhā as you will at the homam. Right after each svāhā tap the
+   big round **Mark svāhā** button (on a computer you can press Space).
+3. Tap **Finish learning**. It tells you how many it learned and whether they stand apart from the
+   mantra, and the count starts again from 0.
+4. With family: everyone chants together, one person marks. Start from Settings and keep **Add to
+   what it already learned** ticked so the group's svāhā join yours.
+
+**Test** also shows what the app hears, a **Mark svāhā** button for checking counts, and
+**Save last 2 min of sound**.
 
 Until a device has learned, it uses a basic listener (a hiss "s" followed by a held "aa").
 Two counts can't be closer than the *gap between counts* (3 s by default).

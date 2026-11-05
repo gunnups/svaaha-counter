@@ -16,10 +16,10 @@ const { page } = app;
 let failed = false;
 try {
 
-  // Turn on the test log so we can see decisions.
-  await page.click('#open-settings');
-  await page.check('input[name="showLog"]');
-  await page.click('#settings button[value="close"]');
+  // Turn on Test so we can see decisions; it offers to learn first - not now.
+  await page.click('#test-toggle');
+  await page.click('#learn-ask-no');
+  if ((await page.getAttribute('#test-toggle', 'aria-checked')) !== 'true') throw new Error('Test switch did not turn on');
 
   page.on('console', (m) => console.log('console:', m.text()));
   await page.click('#listen');
