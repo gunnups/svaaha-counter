@@ -1,6 +1,6 @@
 // Keeps the app working with no internet (e.g. weak signal in the hall).
 // Bump VERSION whenever any app file changes so phones pick up the update.
-const VERSION = 'svaha-v8';
+const VERSION = 'svaha-v9';
 const FILES = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const FILES = [
   './js/recorder.js',
   './js/store.js',
   './js/templates.js',
+  './js/wave.js',
+  './js/wave-view.js',
   './img/gayatri.jpg',
   './img/apple-touch-icon.png',
   './img/icon-192.png',

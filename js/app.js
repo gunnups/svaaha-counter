@@ -1,7 +1,9 @@
 // Screen wiring: buttons, settings, teach mode, keep-awake, and the count itself.
 
 import { startMic } from './audio.js';
-import { createEngine } from './engine.js';
+import { createEngine, marginFor } from './engine.js';
+import { createWaveHistory } from './wave.js';
+import { createWaveView } from './wave-view.js';
 import * as store from './store.js';
 import { createRecorder, MAX_SECONDS } from './recorder.js';
 
@@ -34,6 +36,8 @@ const ui = {
   saveSound: $('save-sound'),
 };
 
+const waveView = createWaveView($('wave'), $('wave-start'), $('wave-end'));
+
 let count = store.loadCount();
 let settings = store.loadSettings();
 let taught = store.loadTaught();
@@ -42,6 +46,11 @@ let engine = null;
 let wakeLock = null;
 let backgroundTimer = null;
 let recorder = null;
+let wave = null;           // last 30 s of sound for the scrolling picture
+let audioMs = 0;          // listening clock: ms of sound received since Start
+let chunkAt = 0;          // performance.now() when the last sound arrived
+let wallStart = 0;        // Date.now() at Start, to show real clock times
+const MAX_SMOOTH_MS = 120;  // scroll smoothly between sound chunks, but never run ahead
 let heardTimer = null;
 
 /* ---------- count ---------- */
@@ -106,7 +115,10 @@ function noteHeard(decision) {
 function handle(decision) {
   addLog(decision);
   noteHeard(decision);
-  if (decision.type === 'count') setCount(count + 1, true);
+  if (decision.type === 'count') {
+    setCount(count + 1, true);
+    wave?.markSvaha(decision.event.startMs, decision.event.endMs);
+  }
   if (decision.type === 'ignored') {
     ui.teachStatus.textContent = `Heard a sound but did not keep it: ${decision.reason ?? 'unclear'}. Learned so far: ${
       engine?.mode === 'teach-svaha' ? taught.positives.length : taught.negatives.length
@@ -149,6 +161,11 @@ function onSamples(samples) {
   if (!engine) return;
   recorder?.add(samples);
   engine.push(samples).forEach(handle);
+  let loudest = 0;
+  for (const v of samples) loudest = Math.max(loudest, Math.abs(v));
+  wave.add(audioMs, loudest, engine.level * 30 > marginFor(settings.sensitivity));
+  audioMs += (samples.length / mic.sampleRate) * 1000;
+  chunkAt = performance.now();
 }
 
 async function startListening() {
@@ -163,6 +180,10 @@ async function startListening() {
   }
   engine = createEngine(mic.sampleRate, settings, taught);
   recorder = createRecorder(mic.sampleRate);
+  wave = createWaveHistory();
+  audioMs = 0;
+  chunkAt = performance.now();
+  wallStart = Date.now();
   await keepScreenOn();
   ui.listen.textContent = 'Stop';
   ui.listen.setAttribute('aria-pressed', 'true');
@@ -188,6 +209,8 @@ function stopListening() {
 function drawMeter() {
   if (!engine) return;
   ui.meter.style.transform = `scaleX(${engine.level.toFixed(3)})`;
+  const nowMs = audioMs + Math.min(MAX_SMOOTH_MS, performance.now() - chunkAt);
+  waveView.draw(wave, nowMs, wallStart + nowMs);
   requestAnimationFrame(drawMeter);
 }
 

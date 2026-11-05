@@ -4,6 +4,12 @@ Counts svāhā offerings during a homam by listening through the phone or tablet
 Plain web page (no server code, no internet needed once opened); works in Safari on iPhone
 and Chrome / Samsung Internet on the Galaxy Tab. Counting happens entirely on the device.
 
+## The sound picture
+
+Under the count, the last 30 s of sound scroll past (clock times at both ends):
+grey = quiet, blue-grey = voice / mantra, saffron = a counted svāhā (painted ~1 s after it ends,
+once confirmed). A svāhā that stays blue-grey was missed — tap *Save last 2 min of sound*.
+
 ## How it recognises svāhā
 
 1. A short hiss (“s”) followed quickly by a long, **steady** “aaa…haa” vowel, at least 0.6 s.

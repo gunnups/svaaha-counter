@@ -9,6 +9,10 @@
   --danger: #e2574c;
   --surface: #14110c;
   --line: rgb(233 189 98 / 0.22);
+  --wave-quiet: #3a342a;
+  --wave-voice: #7f9bb5;
+  --wave-svaha: #f0832a;
+  --wave-height: 3.5rem;
 
   --font-numeral: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -167,6 +171,49 @@ html, body {
   transition: transform 400ms var(--ease);
 }
 
+/* ---- Scrolling sound picture ---- */
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(30rem, 100%);
+}
+
+.wave canvas {
+  flex: 1;
+  min-width: 0;
+  height: var(--wave-height);
+  border-radius: 8px;
+  background: linear-gradient(180deg, transparent, rgb(233 189 98 / 0.04), transparent);
+}
+
+.wave-time {
+  font: 0.68rem/1 ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.wave-legend {
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+.wave-legend .key {
+  width: 0.7rem;
+  height: 0.35rem;
+  border-radius: 2px;
+  margin-left: 0.4rem;
+}
+
+.key-voice { background: var(--wave-voice); }
+.key-svaha { background: var(--wave-svaha); box-shadow: 0 0 6px rgb(240 131 42 / 0.6); }
+.wave-legend .note { opacity: 0.7; }
+
 /* ---- Buttons ---- */
 button {
   font: inherit;
@@ -288,7 +335,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 
 @media (orientation: landscape) and (max-height: 500px) {
   /* phones on their side: tighter */
-  :root { --count-size: clamp(4rem, 13vw, 8rem); }
+  :root { --count-size: clamp(4rem, 13vw, 8rem); --wave-height: 2.4rem; }
   .tally { gap: 0.2rem; padding: 0.5rem; }
   .nudge, .primary { min-height: 2.8rem; height: 2.8rem; }
   .nudge { width: 2.8rem; }

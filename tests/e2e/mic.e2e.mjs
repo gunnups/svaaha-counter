@@ -90,6 +90,27 @@ try {
   console.log(log.join('\n'));
   if (count !== 3) failed = true;
 
+  // The scrolling sound picture shows mantra (blue-grey) and counted svaahaa (saffron) bars, and clock labels.
+  const picture = await page.evaluate(() => {
+    const c = document.getElementById('wave');
+    const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let svaha = 0;
+    let voice = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      const [r, g, b, a] = [px[i], px[i + 1], px[i + 2], px[i + 3]];
+      if (a < 200) continue;
+      if (r === 240 && g === 131 && b === 42) svaha++;
+      if (r === 127 && g === 155 && b === 181) voice++;
+    }
+    return { svaha, voice, start: document.getElementById('wave-start').textContent, end: document.getElementById('wave-end').textContent };
+  });
+  console.log('sound picture:', JSON.stringify(picture));
+  if (!picture.svaha || !picture.voice || !/^\d\d:\d\d:\d\d$/.test(picture.end)) failed = true;
+  await page.screenshot({ path: join(out, 'listening-portrait.png') });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.screenshot({ path: join(out, 'listening-landscape-phone.png') });
+  await page.setViewportSize({ width: 390, height: 844 });
+
   // "Save last 2 min of sound" downloads what was just heard.
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('#save-sound')]);
   const saved = join(out, download.suggestedFilename());
