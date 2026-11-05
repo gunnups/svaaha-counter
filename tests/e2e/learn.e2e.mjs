@@ -28,6 +28,7 @@ const check = (ok, what) => {
 };
 try {
   await page.click('#open-settings');
+  await page.check('input[name="showLog"]'); // testing tools: the log proves which listener counted
   await page.click('#learn');
   for (let k = 0; k < LEARN_ROUNDS; k++) {
     await atSceneTime(svahaEnd(k) + MARK_DELAY_S);
@@ -50,7 +51,7 @@ try {
   const log = await page.$$eval('#log li', (lis) => lis.map((li) => li.textContent).reverse().slice(-6));
   console.log(log.join('\n'));
   check(count === COUNT_ROUNDS, `counted ${count} of the next ${COUNT_ROUNDS} rounds with what it learned`);
-  check((await page.textContent('#status-text')).includes('knows your svāhā') || log.some((l) => l.includes('count')), 'counting with the learned svāhā');
+  check(log.filter((l) => l.includes('count')).every((l) => l.includes('matched your svāhā')), 'every count came from the learned svāhā');
 } finally {
   if (app.errors.length) {
     failed = true;
