@@ -24,6 +24,10 @@ export const DETECTOR_DEFAULTS = Object.freeze({
 const PRE_ROLL_FRAMES = 40;
 const FLUX_STEP = 3;
 const SIB_SOFTER_DB = 9; // the "s" may be this much softer than the vowel threshold
+// Rooms with hum/rumble (fans, AC, monitors) push every frame's hiss ratio down,
+// so an "s" is also accepted when it stands out from this room's usual sound:
+const SIB_REL_DB = 15;   // hiss ratio this far above the room's typical ratio
+const SIB_RISE_DB = 6;   // and the hiss band this far above the room's own hiss
 
 const SMOOTH_FRAMES = 2;
 
@@ -71,6 +75,28 @@ export function vowelFlux(frames, voicedRatioDb = DETECTOR_DEFAULTS.voicedRatioD
   return best / w;
 }
 
+/** Running percentile of the recent history (e.g. the room's background level). */
+function createPercentile(size, p) {
+  const history = new Float32Array(size);
+  let len = 0;
+  let pos = 0;
+  let value = -Infinity;
+  return {
+    add(x) {
+      history[pos] = x;
+      pos = (pos + 1) % size;
+      len = Math.min(len + 1, size);
+      if (len % 10 === 0 || len < 20) {
+        const sorted = Array.from(history.subarray(0, len)).sort((a, b) => a - b);
+        value = sorted[Math.floor(sorted.length * p)];
+      }
+    },
+    get value() {
+      return value;
+    },
+  };
+}
+
 /**
  * @param {number} hopMs  time between frames
  * @param {Partial<typeof DETECTOR_DEFAULTS>} [options]
@@ -82,6 +108,8 @@ export function createDetector(hopMs, options = {}) {
   let historyLen = 0;
   let historyPos = 0;
   let floorDb = -Infinity;
+  const ratioTypical = createPercentile(floorSize, 0.5);
+  const hissFloor = createPercentile(floorSize, DETECTOR_DEFAULTS.floorPercentile);
 
   let state = 'idle';
   let t = 0;
@@ -149,12 +177,16 @@ export function createDetector(hopMs, options = {}) {
   function step(frame) {
     t += hopMs;
     updateFloor(frame.db);
+    ratioTypical.add(frame.sibRatioDb);
+    hissFloor.add(frame.sibDb ?? -Infinity);
     recent.push(frame);
     if (recent.length > PRE_ROLL_FRAMES) recent.shift();
     if (t < opts.warmupMs) return null;
 
     const above = frame.db - floorDb;
-    const isSib = above > opts.marginDb - SIB_SOFTER_DB && frame.sibRatioDb > opts.sibRatioDb;
+    const standsOut =
+      frame.sibRatioDb - ratioTypical.value > SIB_REL_DB && (frame.sibDb ?? -Infinity) - hissFloor.value > SIB_RISE_DB;
+    const isSib = (above > opts.marginDb - SIB_SOFTER_DB && frame.sibRatioDb > opts.sibRatioDb) || standsOut;
     const isVoiced = above > opts.marginDb && frame.sibRatioDb < opts.voicedRatioDb;
 
     switch (state) {

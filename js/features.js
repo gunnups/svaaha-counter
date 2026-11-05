@@ -69,6 +69,7 @@ function bandEdges(sampleRate) {
  * Each frame: { db, sibRatioDb, bands } where
  *   db          overall loudness (dB, arbitrary reference)
  *   sibRatioDb  hiss energy relative to vowel energy (high = "s", low = "aa")
+ *   sibDb       hiss-band loudness alone (dB)
  *   bands       NUM_BANDS log-energies describing the sound's colour
  */
 export function createFeatureExtractor(sampleRate) {
@@ -113,6 +114,7 @@ export function createFeatureExtractor(sampleRate) {
     return {
       db: 10 * Math.log10(voicedE + sibE + EPS),
       sibRatioDb: 10 * Math.log10((sibE + EPS) / (voicedE + EPS)),
+      sibDb: 10 * Math.log10(sibE + EPS),
       bands,
     };
   }
