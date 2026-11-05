@@ -3,3 +3,4 @@ node_modules/
 tests/e2e/out/
 .DS_Store
 recordings/
+JOURNAL.md
