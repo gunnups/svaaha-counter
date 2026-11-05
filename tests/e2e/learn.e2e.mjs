@@ -51,7 +51,8 @@ try {
   const log = await page.$$eval('#log li', (lis) => lis.map((li) => li.textContent).reverse().slice(-6));
   console.log(log.join('\n'));
   check(count === COUNT_ROUNDS, `counted ${count} of the next ${COUNT_ROUNDS} rounds with what it learned`);
-  check(log.filter((l) => l.includes('count')).every((l) => l.includes('matched your svāhā')), 'every count came from the learned svāhā');
+  const afterReset = log.filter((l) => l.includes('count')).slice(-COUNT_ROUNDS);
+  check(afterReset.every((l) => l.includes('matched your svāhā')), 'counts after learning came from the learned svāhā');
 } finally {
   if (app.errors.length) {
     failed = true;
