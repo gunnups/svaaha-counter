@@ -36,3 +36,23 @@ test('real rehearsal, continuous chanting (no pause before svaahaa): 3 rounds co
   // svaahaa ends each round at ~7.5 s, ~13.5 s, ~19.6 s
   [7.5, 13.5, 19.6].forEach((t, i) => assert.ok(Math.abs(ends[i] - t) < 0.6, `count ${i + 1} at ${ends[i]} s, expected ~${t} s`));
 });
+
+// Whole-word spotting trained on the marked flow clip (C) must work on *other* sessions.
+const flowClip = 'C-flow-2026-11-05-1025.wav';
+const mantraClip = 'B-mantra-alone-2026-11-05-1021.wav';
+const haveSpotData = [flowClip, mantraClip, quietHouse, continuous, 'svaha-test-2026-11-05-094326.wav'].every((f) => existsSync(dir + f));
+test('whole-word spotting from marked flow clip: mantra 0, other sessions 10 / 3 / 10', { skip: !haveSpotData }, async () => {
+  const { vectorsOf, templatesFrom } = await import('../tools/spot-eval.mjs');
+  const { createSpotter } = await import('../js/spotter.js');
+  const templates = templatesFrom(vectorsOf(dir + flowClip));
+  const counted = (file) => {
+    const clip = vectorsOf(dir + file);
+    const spot = createSpotter(templates, { threshold: 4.83 }, clip.hop * 1000);
+    const silence = clip.frames[0].vec.map(() => 0);
+    return [...clip.frames.map((f) => f.vec), ...Array(100).fill(silence)].filter((v) => spot.push(v)).length;
+  };
+  assert.equal(counted(mantraClip), 0);
+  assert.equal(counted(quietHouse), 10);
+  assert.equal(counted(continuous), 3);
+  assert.equal(counted('svaha-test-2026-11-05-094326.wav'), 10);
+});
