@@ -21,7 +21,7 @@ export function marginFor(sensitivity) {
   return 20 - s * 1.6;
 }
 
-const BASE_MAX_FLUX = 4.6;
+const BASE_MAX_FLUX = 4.1;
 const CONFIRM_MS = 900;      // wait this long after a candidate before counting it
 const MAX_CONFIRM_MS = 3000; // never wait longer than this
 

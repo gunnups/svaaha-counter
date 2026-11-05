@@ -11,7 +11,7 @@ export const DETECTOR_DEFAULTS = Object.freeze({
   minSibMs: 30,          // shortest "s"
   maxSibToVowelMs: 350,  // "s" must lead into the vowel within this time
   minVowelMs: 600,       // shortest held "aaa...haa" that counts
-  maxFlux: 4.6,          // how much the vowel's sound may wander (speech wanders more)
+  maxFlux: 4.1,          // how much the vowel's sound may wander (speech wanders more)
   maxVowelMs: 2800,      // longer than this is chanting/talking, not svaahaa
   maxGapMs: 170,         // short dips (the "h") allowed inside the vowel
   dropDb: 15,            // the vowel has ended once it falls this far below its own peak
@@ -24,6 +24,19 @@ export const DETECTOR_DEFAULTS = Object.freeze({
 const PRE_ROLL_FRAMES = 40;
 const FLUX_STEP = 3;
 const SIB_SOFTER_DB = 9; // the "s" may be this much softer than the vowel threshold
+
+const SMOOTH_FRAMES = 2;
+
+/** Moving average over n frames: removes flicker from several voices beating together. */
+function smoothFrames(rows, n) {
+  if (n <= 1) return rows;
+  return rows.map((_, i) => {
+    const from = Math.max(0, i - n + 1);
+    const out = new Array(rows[i].length).fill(0);
+    for (let j = from; j <= i; j++) for (let b = 0; b < out.length; b++) out[b] += rows[j][b] / (i - from + 1);
+    return out;
+  });
+}
 
 function centred(bands) {
   let mean = 0;
@@ -39,7 +52,8 @@ function centred(bands) {
  * keeps moving between vowels (high value).
  */
 export function vowelFlux(frames, voicedRatioDb = DETECTOR_DEFAULTS.voicedRatioDb, windowFrames = Infinity) {
-  const v = frames.filter((f) => f.sibRatioDb < voicedRatioDb).map((f) => centred(f.bands));
+  const raw = frames.filter((f) => f.sibRatioDb < voicedRatioDb).map((f) => centred(f.bands));
+  const v = smoothFrames(raw, SMOOTH_FRAMES);
   if (v.length <= FLUX_STEP) return Infinity;
   const steps = [];
   for (let i = FLUX_STEP; i < v.length; i++) {
