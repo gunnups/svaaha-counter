@@ -22,7 +22,7 @@ export function marginFor(sensitivity) {
 }
 
 const BASE_MAX_FLUX = 4.1;
-const CONFIRM_MS = 900;      // wait this long after a candidate before counting it
+const CONFIRM_MS = 1200;      // wait this long after a candidate before counting it
 const MAX_CONFIRM_MS = 3000; // never wait longer than this
 
 function detectorOptions(settings) {
