@@ -502,6 +502,8 @@ function applySettings() {
   ui.saveSound.hidden = !settings.showLog;
   ui.markRow.hidden = !settings.showLog && !learning; // the fire button: testing or learning
   ui.finishLearning.hidden = !learning;
+  ui.markSvaha.classList.toggle('learning', learning);
+  ui.markCaption.hidden = learning; // the learning button has its words inside
   ui.testToggle.setAttribute('aria-checked', String(settings.showLog));
   engine?.setSettings(settings);
   renderCount();
