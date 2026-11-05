@@ -31,6 +31,21 @@ export function noise(n, amp, seed = 1) {
   return out;
 }
 
+/** Seeded pink-ish noise (more rumble than hiss, like a real room). */
+export function pinkNoise(n, amp, seed = 3) {
+  const white = noise(n, 1, seed);
+  const out = new Float32Array(n);
+  let b0 = 0, b1 = 0, b2 = 0;
+  for (let i = 0; i < n; i++) {
+    const w = white[i];
+    b0 = 0.99765 * b0 + w * 0.099046;
+    b1 = 0.963 * b1 + w * 0.2965164;
+    b2 = 0.57 * b2 + w * 1.0526913;
+    out[i] = (b0 + b1 + b2 + w * 0.1848) * amp * 0.25;
+  }
+  return out;
+}
+
 /** Concatenate clips with silences; parts are Float32Array or seconds of silence (number). */
 export function scene(sampleRate, parts) {
   const arrays = parts.map((p) => (typeof p === 'number' ? new Float32Array(Math.round(p * sampleRate)) : p));
