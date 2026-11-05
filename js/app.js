@@ -8,6 +8,7 @@ import * as store from './store.js';
 import { createRecorder, MAX_SECONDS } from './recorder.js';
 
 const SAVE_LABEL = `Save last ${MAX_SECONDS / 60} min of sound`;
+const MARK_LABEL = 'Mark svāhā';
 
 const BACKGROUND_TEACH_MS = 20000;
 const MIC_DENIED_HELP =
@@ -34,6 +35,7 @@ const ui = {
   teachBackground: $('teach-background'),
   teachStatus: $('teach-status'),
   saveSound: $('save-sound'),
+  markSvaha: $('mark-svaha'),
 };
 
 const waveView = createWaveView($('wave'), $('wave-start'), $('wave-end'));
@@ -51,7 +53,10 @@ let audioMs = 0;          // listening clock: ms of sound received since Start
 let chunkAt = 0;          // performance.now() when the last sound arrived
 let wallStart = 0;        // Date.now() at Start, to show real clock times
 let sessionStart = 0;     // Date.now() when Start or Reset was last pressed (left label)
-const MAX_SMOOTH_MS = 120;  // scroll smoothly between sound chunks, but never run ahead
+const MAX_SMOOTH_MS = 120;
+const WAVE_WINDOW_MS = 15000; // the picture shows the last 15 s
+const WAVE_COLUMN_MS = 50;
+const WAVE_BLOCK = 512;       // samples per loudness reading (~10 ms)  // scroll smoothly between sound chunks, but never run ahead
 let heardTimer = null;
 
 /* ---------- count ---------- */
@@ -162,9 +167,13 @@ function onSamples(samples) {
   if (!engine) return;
   recorder?.add(samples);
   engine.push(samples).forEach(handle);
-  let loudest = 0;
-  for (const v of samples) loudest = Math.max(loudest, Math.abs(v));
-  wave.add(audioMs, loudest, engine.level * 30 > marginFor(settings.sensitivity));
+  const isVoice = engine.level * 30 > marginFor(settings.sensitivity);
+  for (let i = 0; i < samples.length; i += WAVE_BLOCK) {
+    const block = samples.subarray(i, i + WAVE_BLOCK);
+    let energy = 0;
+    for (const v of block) energy += v * v;
+    wave.add(audioMs + (i / mic.sampleRate) * 1000, Math.sqrt(energy / block.length), isVoice);
+  }
   audioMs += (samples.length / mic.sampleRate) * 1000;
   chunkAt = performance.now();
 }
@@ -181,7 +190,7 @@ async function startListening() {
   }
   engine = createEngine(mic.sampleRate, settings, taught);
   recorder = createRecorder(mic.sampleRate);
-  wave = createWaveHistory();
+  wave = createWaveHistory({ windowMs: WAVE_WINDOW_MS, columnMs: WAVE_COLUMN_MS });
   audioMs = 0;
   chunkAt = performance.now();
   wallStart = Date.now();
@@ -295,6 +304,31 @@ function saveRecentSound() {
 
 ui.saveSound.addEventListener('click', saveRecentSound);
 
+/* ---------- marking "I said svāhā here" (for checking and tuning) ---------- */
+
+function markSvaha() {
+  if (!recorder || !wave) return;
+  recorder.mark();
+  wave.mark(audioMs);
+  ui.markSvaha.textContent = `Marked ✓ (${recorder.marks().length})`;
+  clearTimeout(markLabelTimer);
+  markLabelTimer = setTimeout(() => (ui.markSvaha.textContent = MARK_LABEL), 1200);
+}
+
+let markLabelTimer = null;
+ui.markSvaha.addEventListener('click', markSvaha);
+// Space = mark, everywhere on the main screen. (A focused button would otherwise take
+// Space as a click - e.g. Start/Stop - so the key is always claimed here.)
+const spaceIsMark = (e) => e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !document.querySelector('dialog[open]');
+document.addEventListener('keydown', (e) => {
+  if (!spaceIsMark(e)) return;
+  e.preventDefault();
+  if (!e.repeat) markSvaha();
+});
+document.addEventListener('keyup', (e) => {
+  if (spaceIsMark(e)) e.preventDefault();
+});
+
 /* ---------- buttons ---------- */
 
 $('plus').addEventListener('click', () => setCount(count + 1, true));
@@ -357,6 +391,7 @@ function readForm() {
 function applySettings() {
   ui.log.hidden = !settings.showLog;
   ui.saveSound.hidden = !settings.showLog;
+  ui.markSvaha.hidden = !settings.showLog;
   engine?.setSettings(settings);
   renderCount();
 }

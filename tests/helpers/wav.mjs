@@ -5,19 +5,26 @@ export function readWav(path) {
   const buf = readFileSync(path);
   let pos = 12;
   let sampleRate = 0;
-  while (pos < buf.length) {
+  let samples = null;
+  let marks = [];
+  while (pos + 8 <= buf.length) {
     const id = buf.toString('ascii', pos, pos + 4);
     const size = buf.readUInt32LE(pos + 4);
     if (id === 'fmt ') sampleRate = buf.readUInt32LE(pos + 12);
     if (id === 'data') {
-      const n = size / 2;
-      const samples = new Float32Array(n);
+      const n = Math.floor(size / 2);
+      samples = new Float32Array(n);
       for (let i = 0; i < n; i++) samples[i] = buf.readInt16LE(pos + 8 + i * 2) / 32768;
-      return { sampleRate, samples };
+    }
+    if (id === 'mark') {
+      // svaahaa marks tapped while recording (seconds from clip start)
+      const parsed = JSON.parse(buf.toString('utf8', pos + 8, pos + 8 + size));
+      marks = Array.isArray(parsed.svahaMarksSeconds) ? parsed.svahaMarksSeconds.filter(Number.isFinite) : [];
     }
     pos += 8 + size + (size % 2);
   }
-  throw new Error(`no data chunk in ${path}`);
+  if (!samples) throw new Error(`no data chunk in ${path}`);
+  return { sampleRate, samples, marks };
 }
 
 /** Seeded pseudo-random noise so tests are repeatable. */

@@ -51,3 +51,12 @@ test('a reused slot does not show stale sound from a minute ago', () => {
   near(cols[9].peak, 0.2);
   assert.equal(cols[9].kind, 'quiet');
 });
+
+test('a mark ("I said svaahaa here") shows on its column', () => {
+  const w = createWaveHistory(opts);
+  w.add(450, 0.3, true);
+  w.mark(450);
+  const cols = w.columns(500);
+  assert.equal(cols[9].marked, true);
+  assert.equal(cols[8].marked, false);
+});

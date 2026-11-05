@@ -9,7 +9,7 @@ test('a test recording is saved as a 16-bit mono WAV at the mic rate', async () 
   const rec = createRecorder(48000);
   rec.add(new Float32Array([0, 0.5, -0.5, 1]));
   const bytes = new DataView(await rec.toWav().arrayBuffer());
-  assert.equal(bytes.byteLength, 44 + 4 * 2);
+  assert.equal(bytes.getUint32(40, true), 4 * 2); // data size: 4 samples
   assert.equal(bytes.getUint32(24, true), 48000);
   assert.equal(bytes.getUint16(34, true), 16);
   assert.equal(bytes.getInt16(46, true), 16384);
@@ -42,4 +42,28 @@ test('a long held vowel with no "s" in front is reported, never counted', () => 
 
 test('chanting the mantra alone does not count', () => {
   assert.equal(run(withRoom([1, mantra.samples, 2])).filter((d) => d.type === 'count').length, 0);
+});
+
+test('marks are saved in the WAV and read back, in seconds from the clip start', async () => {
+  const { readWav } = await import('./helpers/wav.mjs');
+  const { writeFileSync, mkdtempSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const rec = createRecorder(100); // 100 samples/s
+  rec.add(new Float32Array(150)); // 1.5 s
+  rec.mark();                     // at 1.5 s
+  rec.add(new Float32Array(50));  // 2.0 s total
+  const path = join(mkdtempSync(join(tmpdir(), 'svaha-')), 'clip.wav');
+  writeFileSync(path, Buffer.from(await rec.toWav().arrayBuffer()));
+  const clip = readWav(path);
+  assert.equal(clip.samples.length, 200);
+  assert.deepEqual(clip.marks, [1.5]);
+});
+
+test('marks older than the kept 2 minutes are dropped', async () => {
+  const rec = createRecorder(10);
+  rec.mark(); // at 0 s
+  for (let i = 0; i < 1300; i++) rec.add(new Float32Array([0])); // 130 s
+  rec.mark();
+  assert.deepEqual(rec.marks(), [120]);
 });

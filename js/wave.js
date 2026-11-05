@@ -4,7 +4,7 @@
 
 /**
  * @typedef {'empty' | 'quiet' | 'voice' | 'svaha'} ColumnKind
- * @typedef {{peak: number, kind: ColumnKind}} Column
+ * @typedef {{peak: number, kind: ColumnKind, marked: boolean}} Column
  */
 
 /**
@@ -17,6 +17,7 @@ export function createWaveHistory({ windowMs = 30000, columnMs = 100 } = {}) {
   const peak = new Float32Array(size);
   const voice = new Uint8Array(size);
   let svahaRanges = []; // [startMs, endMs] of counted svaahaas
+  let markTimes = [];   // moments the person marked "I said svaahaa"
 
   function slotFor(column) {
     const slot = column % size;
@@ -40,6 +41,11 @@ export function createWaveHistory({ windowMs = 30000, columnMs = 100 } = {}) {
     svahaRanges = [...svahaRanges, [startMs, endMs]].filter(([, end]) => end > endMs - windowMs * 2);
   }
 
+  /** The person marked a svaahaa at this moment (for checking the counter). */
+  function mark(atMs) {
+    markTimes = [...markTimes, atMs].filter((m) => m > atMs - windowMs * 2);
+  }
+
   const isSvaha = (fromMs, toMs) => svahaRanges.some(([s, e]) => s < toMs && e > fromMs);
 
   /** The window ending at `nowMs`, oldest column first. @returns {Column[]} */
@@ -48,13 +54,14 @@ export function createWaveHistory({ windowMs = 30000, columnMs = 100 } = {}) {
     return Array.from({ length: count }, (_, i) => {
       const column = last - count + 1 + i;
       const slot = column % size;
-      if (column < 0 || index[slot] !== column) return { peak: 0, kind: 'empty' };
       const from = column * columnMs;
+      const marked = markTimes.some((m) => m >= from && m < from + columnMs);
+      if (column < 0 || index[slot] !== column) return { peak: 0, kind: 'empty', marked };
       let kind = voice[slot] ? 'voice' : 'quiet';
       if (isSvaha(from, from + columnMs)) kind = 'svaha';
-      return { peak: peak[slot], kind };
+      return { peak: peak[slot], kind, marked };
     });
   }
 
-  return { add, markSvaha, columns, columnMs, windowMs };
+  return { add, markSvaha, mark, columns, columnMs, windowMs };
 }

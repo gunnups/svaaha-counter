@@ -1,8 +1,7 @@
 // Draws the scrolling 30-second sound picture under the count:
-// grey = quiet, blue-grey = mantra (voice), saffron = counted svaahaa.
+// grey = quiet, blue-grey = mantra (voice), saffron = counted svaahaa, white tick = person's mark.
 
-const FLOOR_DB = -60; // quieter than this draws as a flat line
-const TOP_DB = -6;    // this loud fills the height
+const MIN_RANGE_DB = 24; // the picture spans at least this many dB, quiet room to loud voice
 const GAP_PX = 1;     // space between bars (CSS px)
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -11,11 +10,19 @@ const clock = (ms) => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-/** 0..1 bar height from a peak sample value, on a dB scale (voices are often quiet). */
-export function barHeight(peak) {
-  if (!(peak > 0)) return 0;
-  const db = 20 * Math.log10(peak);
-  return Math.min(1, Math.max(0, (db - FLOOR_DB) / (TOP_DB - FLOOR_DB)));
+const toDb = (v) => (v > 0 ? 20 * Math.log10(v) : -Infinity);
+
+/**
+ * Scale for the bars from what is on screen: the quiet room sits at the bottom and the
+ * loudest moment at the top, so syllables and the svaahaa stand out instead of a flat block.
+ * @returns {(level: number) => number} level -> 0..1 height
+ */
+export function scaleFor(levels) {
+  const dbs = levels.filter((v) => v > 0).map(toDb).sort((a, b) => a - b);
+  if (dbs.length === 0) return () => 0;
+  const low = dbs[Math.floor(dbs.length * 0.1)];
+  const high = Math.max(dbs[dbs.length - 1], low + MIN_RANGE_DB);
+  return (level) => Math.min(1, Math.max(0, (toDb(level) - low) / (high - low)));
 }
 
 /**
@@ -30,6 +37,7 @@ export function createWaveView(canvas, startLabel, endLabel) {
     quiet: css.getPropertyValue('--wave-quiet').trim() || '#3a342a',
     voice: css.getPropertyValue('--wave-voice').trim() || '#7f9bb5',
     svaha: css.getPropertyValue('--wave-svaha').trim() || '#f0832a',
+    mark: css.getPropertyValue('--wave-mark').trim() || '#f4ead6',
   };
   let shownSecond = -1;
 
@@ -66,12 +74,19 @@ export function createWaveView(canvas, startLabel, endLabel) {
     const shift = ((nowMs % history.columnMs) / history.columnMs) * step; // smooth scroll between columns
     const barW = Math.max(1, step - GAP_PX * dpr);
     const mid = height / 2;
+    const scale = scaleFor(columns.filter((c) => c.kind !== 'empty').map((c) => c.peak));
     ctx.clearRect(0, 0, width, height);
     columns.forEach((col, i) => {
-      if (col.kind === 'empty') return;
-      const half = Math.max(dpr, barHeight(col.peak) * (mid - dpr));
-      ctx.fillStyle = colours[col.kind];
-      ctx.fillRect(i * step - shift, mid - half, barW, half * 2);
+      const x = i * step - shift;
+      if (col.kind !== 'empty') {
+        const half = Math.max(dpr, scale(col.peak) * (mid - dpr));
+        ctx.fillStyle = colours[col.kind];
+        ctx.fillRect(x, mid - half, barW, half * 2);
+      }
+      if (col.marked) {
+        ctx.fillStyle = colours.mark;
+        ctx.fillRect(x, 0, Math.max(1, 2 * dpr), height);
+      }
     });
     labels(wallNowMs, sessionStartMs);
   }

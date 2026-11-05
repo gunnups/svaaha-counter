@@ -12,6 +12,7 @@
   --wave-quiet: #3a342a;
   --wave-voice: #7f9bb5;
   --wave-svaha: #f0832a;
+  --wave-mark: #f4ead6;
   --wave-height: 3.5rem;
 
   --font-numeral: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
@@ -212,6 +213,7 @@ html, body {
 
 .key-voice { background: var(--wave-voice); }
 .key-svaha { background: var(--wave-svaha); box-shadow: 0 0 6px rgb(240 131 42 / 0.6); }
+.wave-legend .key-mark { width: 2px; height: 0.8rem; background: var(--wave-mark); }
 .wave-legend .note { opacity: 0.7; }
 
 /* ---- Buttons ---- */
