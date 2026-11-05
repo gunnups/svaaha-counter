@@ -8,6 +8,9 @@ import { createRecorder, MAX_SECONDS } from './recorder.js';
 const SAVE_LABEL = `Save last ${MAX_SECONDS / 60} min of sound`;
 
 const BACKGROUND_TEACH_MS = 20000;
+const MIC_DENIED_HELP =
+  'Microphone is blocked for this page. Chrome: click the icon left of the address → Microphone → Allow, then reload. ' +
+  'iPhone: Settings → Apps → Safari → Microphone → Allow (or aA in the address bar → Website Settings).';
 const LOG_LIMIT = 40;
 const HEARD_NOTE_MS = 4000;
 
@@ -129,7 +132,7 @@ function onAudioState(state) {
   if (state === 'running') {
     if (engine?.mode === 'count') listeningStatus();
   } else if (mic) {
-    setStatus('error', 'Microphone paused by the phone. Tap Resume.');
+    setStatus('error', 'Microphone is paused. Tap Resume.');
     ui.listen.textContent = 'Resume';
   }
 }
@@ -155,7 +158,7 @@ async function startListening() {
     mic = await startMic(onSamples, onAudioState);
   } catch (err) {
     const denied = err && err.name === 'NotAllowedError';
-    setStatus('error', denied ? 'Microphone permission was refused. Allow it in browser settings.' : String(err.message || err));
+    setStatus('error', denied ? MIC_DENIED_HELP : String(err.message || err));
     return false;
   }
   engine = createEngine(mic.sampleRate, settings, taught);
@@ -164,6 +167,7 @@ async function startListening() {
   ui.listen.textContent = 'Stop';
   ui.listen.setAttribute('aria-pressed', 'true');
   listeningStatus();
+  if (!mic.running) onAudioState('suspended'); // browser kept audio paused: offer Resume
   requestAnimationFrame(drawMeter);
   return true;
 }
@@ -191,6 +195,7 @@ ui.listen.addEventListener('click', async () => {
   if (mic && ui.listen.textContent === 'Resume') {
     await mic.resume();
     ui.listen.textContent = 'Stop';
+    if (mic.running) listeningStatus();
     return;
   }
   if (mic) stopListening();

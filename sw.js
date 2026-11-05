@@ -1,6 +1,6 @@
 // Keeps the app working with no internet (e.g. weak signal in the hall).
 // Bump VERSION whenever any app file changes so phones pick up the update.
-const VERSION = 'svaha-v6';
+const VERSION = 'svaha-v7';
 const FILES = [
   './',
   './index.html',
