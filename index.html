@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Svāhā">
+  <title>Svāhā Counter</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="preload" as="image" href="img/gayatri.jpg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main class="stage">
+    <figure class="deity">
+      <img src="img/gayatri.jpg" alt="Sri Gayatri Devi" width="800" height="1200" fetchpriority="high">
+    </figure>
+
+    <section class="tally" aria-label="Svāhā count">
+      <p class="status" id="status" data-state="idle">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="status-text">Tap Start to listen</span>
+      </p>
+      <div class="meter" aria-hidden="true"><span id="meter-fill"></span></div>
+
+      <output class="count" id="count" aria-live="polite">0</output>
+      <p class="target">svāhā · of <span id="target">1008</span></p>
+      <div class="progress" aria-hidden="true"><span id="progress-fill"></span></div>
+
+      <div class="controls">
+        <button type="button" class="nudge" id="minus" aria-label="Remove one">−1</button>
+        <button type="button" class="primary" id="listen">Start</button>
+        <button type="button" class="nudge" id="plus" aria-label="Add one">+1</button>
+      </div>
+      <div class="secondary">
+        <button type="button" class="quiet" id="reset">Reset</button>
+        <button type="button" class="quiet" id="open-settings">Settings</button>
+      </div>
+
+      <ol class="log" id="log" hidden></ol>
+    </section>
+  </main>
+
+  <dialog id="confirm-reset" class="sheet">
+    <form method="dialog">
+      <h2>Reset the count to 0?</h2>
+      <p>The current count is <strong id="reset-count">0</strong>.</p>
+      <div class="row">
+        <button value="cancel" class="quiet">Keep counting</button>
+        <button value="reset" class="danger">Reset</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings" class="sheet">
+    <form method="dialog" id="settings-form">
+      <h2>Settings</h2>
+
+      <label>Target
+        <input type="number" name="target" min="1" max="100000" inputmode="numeric">
+      </label>
+
+      <label>Sensitivity <output data-for="sensitivity"></output>
+        <input type="range" name="sensitivity" min="1" max="10" step="1">
+        <small>Higher hears softer voices. Lower ignores more room noise.</small>
+      </label>
+
+      <label>Shortest svāhā (seconds) <output data-for="minVowelMs"></output>
+        <input type="range" name="minVowelMs" min="300" max="1500" step="50">
+        <small>How long “svaaahaa” must be held. Raise it if words in the mantra get counted.</small>
+      </label>
+
+      <label>Gap between counts (seconds) <output data-for="gapSeconds"></output>
+        <input type="range" name="gapSeconds" min="1" max="10" step="0.5">
+        <small>Two svāhās closer than this count once.</small>
+      </label>
+
+      <label>Strictness <output data-for="strictness"></output>
+        <input type="range" name="strictness" min="0.7" max="1.3" step="0.1">
+        <small>Higher rejects more look-alike sounds, but may miss some svāhās.</small>
+      </label>
+
+      <fieldset>
+        <legend>Teach it your voices (optional, recommended)</legend>
+        <p class="hint">Say “svāhā” 5–8 times, a few seconds apart, the way it will be said at the homam.
+          Then record 20 s of the mantra and room chatter without svāhā.</p>
+        <div class="row">
+          <button type="button" id="teach-svaha">Teach svāhā</button>
+          <button type="button" id="teach-background">Teach background (20 s)</button>
+        </div>
+        <p class="hint" id="teach-status" aria-live="polite"></p>
+        <label class="check"><input type="checkbox" name="useTaught"> Use what it was taught</label>
+        <button type="button" class="quiet" id="clear-taught">Forget taught sounds</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Testing</legend>
+        <label class="check"><input type="checkbox" name="showLog"> Show what it hears</label>
+        <p class="hint">Not counting your svāhā? Record a clip of a few mantra + svāhā rounds; it is saved
+          as a .wav file (Downloads) that can be used to tune the app to your voices.</p>
+        <div class="row">
+          <button type="button" id="record" aria-pressed="false">Record a test clip</button>
+        </div>
+        <p class="hint" id="record-status" aria-live="polite"></p>
+      </fieldset>
+
+      <div class="row">
+        <button value="close" class="primary">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
