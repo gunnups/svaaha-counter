@@ -103,6 +103,11 @@ function handle(decision) {
   addLog(decision);
   noteHeard(decision);
   if (decision.type === 'count') setCount(count + 1, true);
+  if (decision.type === 'ignored') {
+    ui.teachStatus.textContent = `Heard a sound but did not keep it: ${decision.reason ?? 'unclear'}. Learned so far: ${
+      engine?.mode === 'teach-svaha' ? taught.positives.length : taught.negatives.length
+    }.`;
+  }
   if (decision.type === 'taught-svaha') {
     taught = { ...taught, positives: [...taught.positives, decision.seq] };
     saveTaught(`Heard svāhā ${taught.positives.length}. Say it again, or tap the button to finish.`);
