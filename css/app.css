@@ -184,7 +184,8 @@ button:active { transform: scale(0.96); }
 button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 
 .controls { display: flex; align-items: center; gap: 0.9rem; }
-.secondary { display: flex; gap: 0.5rem; }
+.secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.secondary [hidden] { display: none; }
 
 .nudge {
   width: 3.4rem;
@@ -272,7 +273,7 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .sheet .check input { accent-color: var(--gold); width: 1.1rem; height: 1.1rem; }
 .row { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; margin-top: 0.6rem; }
 .sheet fieldset .row { justify-content: flex-start; }
-#teach-svaha[aria-pressed="true"], #teach-background[aria-pressed="true"], #record[aria-pressed="true"] { border-color: var(--saffron); color: var(--saffron); }
+#teach-svaha[aria-pressed="true"], #teach-background[aria-pressed="true"] { border-color: var(--saffron); color: var(--saffron); }
 
 /* ---- Landscape: Devi on the left, count on the right ---- */
 @media (orientation: landscape) {

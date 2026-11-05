@@ -90,17 +90,13 @@ try {
   console.log(log.join('\n'));
   if (count !== 3) failed = true;
 
-  // "Record a test clip" saves a WAV download.
-  await page.click('#open-settings');
-  await page.click('#record');
-  await page.waitForTimeout(1500);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#record')]);
+  // "Save last 2 min of sound" downloads what was just heard.
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#save-sound')]);
   const saved = join(out, download.suggestedFilename());
   await download.saveAs(saved);
   const wavBytes = (await readFile(saved)).length;
   console.log(`test clip: ${download.suggestedFilename()} ${wavBytes} bytes`);
-  if (!/^svaha-test-.*\.wav$/.test(download.suggestedFilename()) || wavBytes < 48000) failed = true;
-  await page.click('#settings button[value="close"]');
+  if (!/^svaha-test-.*\.wav$/.test(download.suggestedFilename()) || wavBytes < 48000 * 2 * 30) failed = true;
 
   // Count survives a reload.
   await page.reload();

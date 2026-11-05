@@ -39,6 +39,7 @@
       <div class="secondary">
         <button type="button" class="quiet" id="reset">Reset</button>
         <button type="button" class="quiet" id="open-settings">Settings</button>
+        <button type="button" class="quiet" id="save-sound" hidden>Save last 2 min of sound</button>
       </div>
 
       <ol class="log" id="log" hidden></ol>
@@ -101,12 +102,8 @@
       <fieldset>
         <legend>Testing</legend>
         <label class="check"><input type="checkbox" name="showLog"> Show what it hears</label>
-        <p class="hint">Not counting your svāhā? Record a clip of a few mantra + svāhā rounds; it is saved
-          as a .wav file (Downloads) that can be used to tune the app to your voices.</p>
-        <div class="row">
-          <button type="button" id="record" aria-pressed="false">Record a test clip</button>
-        </div>
-        <p class="hint" id="record-status" aria-live="polite"></p>
+        <p class="hint">While listening, the app keeps the last 2 minutes of sound. If it misses a svāhā,
+          tap <em>Save last 2 min of sound</em> under the counter; the .wav file can be used to tune the app.</p>
       </fieldset>
 
       <div class="row">

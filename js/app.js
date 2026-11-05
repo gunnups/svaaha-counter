@@ -5,6 +5,8 @@ import { createEngine } from './engine.js';
 import * as store from './store.js';
 import { createRecorder, MAX_SECONDS } from './recorder.js';
 
+const SAVE_LABEL = `Save last ${MAX_SECONDS / 60} min of sound`;
+
 const BACKGROUND_TEACH_MS = 20000;
 const LOG_LIMIT = 40;
 const HEARD_NOTE_MS = 4000;
@@ -26,8 +28,7 @@ const ui = {
   teachSvaha: $('teach-svaha'),
   teachBackground: $('teach-background'),
   teachStatus: $('teach-status'),
-  record: $('record'),
-  recordStatus: $('record-status'),
+  saveSound: $('save-sound'),
 };
 
 let count = store.loadCount();
@@ -143,7 +144,7 @@ async function keepScreenOn() {
 
 function onSamples(samples) {
   if (!engine) return;
-  if (recorder && !recorder.add(samples)) finishRecording();
+  recorder?.add(samples);
   engine.push(samples).forEach(handle);
 }
 
@@ -158,6 +159,7 @@ async function startListening() {
     return false;
   }
   engine = createEngine(mic.sampleRate, settings, taught);
+  recorder = createRecorder(mic.sampleRate);
   await keepScreenOn();
   ui.listen.textContent = 'Stop';
   ui.listen.setAttribute('aria-pressed', 'true');
@@ -168,7 +170,6 @@ async function startListening() {
 
 function stopListening() {
   finishTeaching();
-  finishRecording();
   mic?.stop();
   mic = null;
   engine = null;
@@ -242,34 +243,27 @@ $('clear-taught').addEventListener('click', () => {
   saveTaught('Forgot all taught sounds.');
 });
 
-/* ---------- test recording ---------- */
+/* ---------- saving the last minutes of sound ---------- */
 
-function finishRecording() {
-  if (!recorder) return;
-  const done = recorder;
-  recorder = null;
-  ui.record.textContent = 'Record a test clip';
-  ui.record.setAttribute('aria-pressed', 'false');
-  if (done.seconds() < 1) return;
+function saveRecentSound() {
+  if (!recorder || recorder.seconds() < 1) {
+    ui.saveSound.textContent = 'Tap Start first';
+    setTimeout(() => (ui.saveSound.textContent = SAVE_LABEL), 2500);
+    return;
+  }
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(done.toWav());
+  link.href = URL.createObjectURL(recorder.toWav());
   link.download = `svaha-test-${stamp}.wav`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 10000);
-  ui.recordStatus.textContent = `Saved ${Math.round(done.seconds())} s as ${link.download}.`;
+  ui.saveSound.textContent = `Saved last ${Math.round(recorder.seconds())} s ✓`;
+  setTimeout(() => (ui.saveSound.textContent = SAVE_LABEL), 4000);
 }
 
-ui.record.addEventListener('click', async () => {
-  if (recorder) return finishRecording();
-  if (!(await startListening())) return;
-  recorder = createRecorder(mic.sampleRate);
-  ui.record.textContent = 'Stop and save';
-  ui.record.setAttribute('aria-pressed', 'true');
-  ui.recordStatus.textContent = `Recording (counting continues, up to ${MAX_SECONDS / 60} min)… say mantra + svāhā a few times.`;
-});
+ui.saveSound.addEventListener('click', saveRecentSound);
 
 /* ---------- buttons ---------- */
 
@@ -325,6 +319,7 @@ function readForm() {
 
 function applySettings() {
   ui.log.hidden = !settings.showLog;
+  ui.saveSound.hidden = !settings.showLog;
   engine?.setSettings(settings);
   renderCount();
 }
@@ -358,3 +353,4 @@ if ('serviceWorker' in navigator) {
 
 applySettings();
 renderCount();
+ui.saveSound.textContent = SAVE_LABEL;

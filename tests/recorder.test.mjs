@@ -17,12 +17,13 @@ test('a test recording is saved as a 16-bit mono WAV at the mic rate', async () 
   assert.equal(rec.seconds(), 4 / 48000);
 });
 
-test('the recording stops growing at its limit', () => {
-  const rec = createRecorder(10);
-  let open = true;
-  for (let i = 0; i < 200 && open; i++) open = rec.add(new Float32Array(10));
-  assert.equal(open, false);
+test('only the most recent 2 minutes are kept, oldest first', async () => {
+  const rec = createRecorder(10); // 10 samples/s -> keeps 1200 samples
+  for (let i = 0; i < 1300; i++) rec.add(new Float32Array([(i % 100) / 100]));
   assert.equal(rec.seconds(), 120);
+  const view = new DataView(await rec.toWav().arrayBuffer());
+  assert.equal(view.getInt16(44, true), Math.round(0.0 * 32767)); // sample #100 (value 0.00) is the oldest kept
+  assert.equal(view.getInt16(46, true), Math.round(0.01 * 32767));
 });
 
 test('a long held vowel with no "s" in front is reported, never counted', () => {
