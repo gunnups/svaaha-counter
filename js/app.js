@@ -50,6 +50,7 @@ let wave = null;           // last 30 s of sound for the scrolling picture
 let audioMs = 0;          // listening clock: ms of sound received since Start
 let chunkAt = 0;          // performance.now() when the last sound arrived
 let wallStart = 0;        // Date.now() at Start, to show real clock times
+let sessionStart = 0;     // Date.now() when Start or Reset was last pressed (left label)
 const MAX_SMOOTH_MS = 120;  // scroll smoothly between sound chunks, but never run ahead
 let heardTimer = null;
 
@@ -184,6 +185,7 @@ async function startListening() {
   audioMs = 0;
   chunkAt = performance.now();
   wallStart = Date.now();
+  startSession(wallStart);
   await keepScreenOn();
   ui.listen.textContent = 'Stop';
   ui.listen.setAttribute('aria-pressed', 'true');
@@ -210,7 +212,7 @@ function drawMeter() {
   if (!engine) return;
   ui.meter.style.transform = `scaleX(${engine.level.toFixed(3)})`;
   const nowMs = audioMs + Math.min(MAX_SMOOTH_MS, performance.now() - chunkAt);
-  waveView.draw(wave, nowMs, wallStart + nowMs);
+  waveView.draw(wave, nowMs, wallStart + nowMs, sessionStart);
   requestAnimationFrame(drawMeter);
 }
 
@@ -304,8 +306,15 @@ $('reset').addEventListener('click', () => {
 });
 
 ui.resetDialog.addEventListener('close', () => {
-  if (ui.resetDialog.returnValue === 'reset') setCount(0);
+  if (ui.resetDialog.returnValue !== 'reset') return;
+  setCount(0);
+  startSession(Date.now());
 });
+
+function startSession(atMs) {
+  sessionStart = atMs;
+  waveView.setSessionStart(atMs);
+}
 
 /* ---------- settings ---------- */
 

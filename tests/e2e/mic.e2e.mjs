@@ -105,7 +105,10 @@ try {
     return { svaha, voice, start: document.getElementById('wave-start').textContent, end: document.getElementById('wave-end').textContent };
   });
   console.log('sound picture:', JSON.stringify(picture));
-  if (!picture.svaha || !picture.voice || !/^\d\d:\d\d:\d\d$/.test(picture.end)) failed = true;
+  // left = when Start was pressed (fixed), right = now: about the scene length apart
+  const secs = (hms) => hms.split(':').reduce((a, x) => a * 60 + Number(x), 0);
+  const span = secs(picture.end) - secs(picture.start);
+  if (!picture.svaha || !picture.voice || Math.abs(span - sceneSeconds) > 4) failed = true;
   await page.screenshot({ path: join(out, 'listening-portrait.png') });
   await page.setViewportSize({ width: 844, height: 390 });
   await page.screenshot({ path: join(out, 'listening-landscape-phone.png') });

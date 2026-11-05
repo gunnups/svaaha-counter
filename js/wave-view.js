@@ -20,8 +20,8 @@ export function barHeight(peak) {
 
 /**
  * @param {HTMLCanvasElement} canvas
- * @param {HTMLElement} startLabel  shows the clock time at the left edge (30 s ago)
- * @param {HTMLElement} endLabel    shows the clock time at the right edge (now)
+ * @param {HTMLElement} startLabel  shows when this session began (Start or Reset was pressed)
+ * @param {HTMLElement} endLabel    shows the current clock time
  */
 export function createWaveView(canvas, startLabel, endLabel) {
   const ctx = canvas.getContext('2d');
@@ -44,11 +44,11 @@ export function createWaveView(canvas, startLabel, endLabel) {
     return dpr;
   }
 
-  function labels(wallNowMs, windowMs) {
+  function labels(wallNowMs, sessionStartMs) {
     const second = Math.floor(wallNowMs / 1000);
     if (second === shownSecond) return;
     shownSecond = second;
-    startLabel.textContent = clock(wallNowMs - windowMs);
+    startLabel.textContent = clock(sessionStartMs);
     endLabel.textContent = clock(wallNowMs);
   }
 
@@ -56,8 +56,9 @@ export function createWaveView(canvas, startLabel, endLabel) {
    * @param {{columns: (nowMs: number) => {peak: number, kind: string}[], columnMs: number, windowMs: number}} history
    * @param {number} nowMs      time on the listening clock (ms since Start)
    * @param {number} wallNowMs  the same moment as a real clock time
+   * @param {number} sessionStartMs  clock time when Start or Reset was pressed
    */
-  function draw(history, nowMs, wallNowMs) {
+  function draw(history, nowMs, wallNowMs, sessionStartMs) {
     const dpr = fitToScreen();
     const { width, height } = canvas;
     const columns = history.columns(nowMs);
@@ -72,8 +73,14 @@ export function createWaveView(canvas, startLabel, endLabel) {
       ctx.fillStyle = colours[col.kind];
       ctx.fillRect(i * step - shift, mid - half, barW, half * 2);
     });
-    labels(wallNowMs, history.windowMs);
+    labels(wallNowMs, sessionStartMs);
   }
 
-  return { draw };
+  /** Show a new session start right away (e.g. after Reset while stopped). */
+  function setSessionStart(sessionStartMs) {
+    shownSecond = -1;
+    startLabel.textContent = clock(sessionStartMs);
+  }
+
+  return { draw, setSessionStart };
 }

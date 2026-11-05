@@ -6,7 +6,7 @@ and Chrome / Samsung Internet on the Galaxy Tab. Counting happens entirely on th
 
 ## The sound picture
 
-Under the count, the last 30 s of sound scroll past (clock times at both ends):
+Under the count, the last 30 s of sound scroll past. Left: when Start or Reset was pressed; right: the time now.
 grey = quiet, blue-grey = voice / mantra, saffron = a counted svāhā (painted ~1 s after it ends,
 once confirmed). A svāhā that stays blue-grey was missed — tap *Save last 2 min of sound*.
 
